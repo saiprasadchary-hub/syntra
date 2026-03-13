@@ -170,13 +170,23 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let backendUrl = '';
-    
+
     // Automatically detect backend URL
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         backendUrl = 'http://localhost:3001';
     } else {
-        // If hosted on Render or elsewhere, use the current origin
-        backendUrl = window.location.origin;
+        // 1. Check if user manually set a URL in localStorage
+        const savedUrl = localStorage.getItem('antigravity_backend_url');
+        
+        if (savedUrl && savedUrl.startsWith('http')) {
+            backendUrl = savedUrl;
+        } else if (window.location.hostname.includes('web.app') || window.location.hostname.includes('firebaseapp.com')) {
+            // 2. If on Firebase Hosting, point to the Render backend (name from render.yaml)
+            backendUrl = 'https://antigravity-backend.onrender.com';
+        } else {
+            // 3. Otherwise assume backend and frontend are on the same domain (e.g. both on Render)
+            backendUrl = window.location.origin;
+        }
     }
 
     // Only attempt connection if we have a URL or are on localhost
