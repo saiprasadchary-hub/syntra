@@ -8,6 +8,7 @@ export class Explorer {
     private expandedFolders: Set<string> = new Set();
     private fileTree: Map<string, any[]> = new Map();
     private isLoading: Set<string> = new Set();
+    private rootPath: string = '';
 
     constructor(socket: Socket, containerId: string) {
         this.socket = socket;
@@ -38,6 +39,10 @@ export class Explorer {
     public refresh(path: string = '.') {
         this.isLoading.add(path);
         this.socket.emit('get-files', path);
+    }
+
+    public setRootPath(path: string) {
+        this.rootPath = path;
     }
 
     public toggleFolder(path: string) {
@@ -191,7 +196,7 @@ export class Explorer {
     }
 
     public copyPath(path: string) {
-        const fullPath = `C:/Users/Sriman Kammari/Desktop/SAI PRASAD/antigravity/${path}`;
+        const fullPath = this.rootPath ? `${this.rootPath}/${path}` : path;
         navigator.clipboard.writeText(fullPath);
         (window as any).AntigravityAPI?.notify?.('Path copied to clipboard');
     }

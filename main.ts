@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatInput = document.getElementById('agent-chat-input') as HTMLTextAreaElement;
     const sendBtn = document.getElementById('send-btn');
     const connStatus = document.getElementById('conn-status');
-    const ROOT_PATH = 'C:/Users/Sriman Kammari/Desktop/SAI PRASAD/antigravity';
+    let serverRootPath = '';
 
     let openFiles: { 
         path: string, 
@@ -171,25 +171,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let backendUrl = '';
     
+    // Automatically detect backend URL
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        backendUrl = localStorage.getItem('antigravity_backend_url') || 'http://localhost:3001';
+        backendUrl = 'http://localhost:3001';
     } else {
-        backendUrl = localStorage.getItem('antigravity_backend_url') || '';
-        
-        // If it got accidentally set to localhost in production, clear it
-        if (backendUrl.includes('localhost') || backendUrl.includes('127.0.0.1')) {
-            backendUrl = '';
-            localStorage.removeItem('antigravity_backend_url');
-        }
-
-        if (!backendUrl) {
-            const msg = 'Enter your Backend URL (e.g. https://your-project.onrender.com or your localtunnel URL).\n\nIMPORTANT: Since this IDE is hosted on HTTPS, you MUST use an HTTPS tunnel URL (like localtunnel or ngrok). Plain localhost will NOT work.';
-            backendUrl = prompt(msg, '') || '';
-            if (backendUrl) {
-                if (!backendUrl.startsWith('http')) backendUrl = 'https://' + backendUrl;
-                localStorage.setItem('antigravity_backend_url', backendUrl);
-            }
-        }
+        // If hosted on Render or elsewhere, use the current origin
+        backendUrl = window.location.origin;
     }
 
     // Only attempt connection if we have a URL or are on localhost
@@ -205,15 +192,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     socket.on('connect_error', (err) => {
         console.error('Socket connection error:', err);
+        // Only notify if it's the first time and not on localhost
         if (window.location.hostname !== 'localhost') {
-            const retry = confirm(`Failed to connect to backend at: ${backendUrl}\n\nError: ${err.message}\n\nWould you like to change the Backend URL?`);
-            if (retry) {
-                const next = prompt('Enter new Backend URL:', backendUrl);
-                if (next) {
-                    localStorage.setItem('antigravity_backend_url', next);
-                    window.location.reload();
-                }
-            }
+            AntigravityAPI.notify(`Connecting to ${backendUrl}...`, 'info');
         }
     });
 
@@ -923,8 +904,9 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 panel.style.display = 'block';
                 if (statusGoLive) statusGoLive.innerHTML = 'Stop Live';
-                const blob = new Blob([activeFile.model.getValue()], { type: 'text/html' });
-                iframe.src = URL.createObjectURL(blob);
+                
+                const previewBase = backendUrl || (window.location.hostname === 'localhost' ? 'http://localhost:3001' : window.location.origin);
+                iframe.src = `${previewBase}/preview/${activeFile.path}`;
                 addNotification('Starting Live Preview...', 'success');
             }
         },
@@ -1176,7 +1158,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (btn) btn.style.display = 'none';
         },
         openFolder: () => {
-            const path = prompt('Enter folder path:', ROOT_PATH);
+            const path = prompt('Enter folder path:', serverRootPath || '.');
             if (path) socket.emit('open-folder', path);
         },
         openFile: () => {
@@ -1376,6 +1358,11 @@ document.addEventListener('DOMContentLoaded', () => {
             connStatus.style.color = 'var(--success)';
             connStatus.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Connected';
         }
+    });
+
+    socket.on('root-path', (path) => {
+        serverRootPath = path;
+        explorer.setRootPath(path);
         explorer.refresh();
     });
 

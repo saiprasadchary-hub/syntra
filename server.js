@@ -13,6 +13,9 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(express.static(path.join(__dirname, 'dist')));
+app.use('/preview', (req, res, next) => {
+    express.static(workspaceRoot)(req, res, next);
+});
 
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
@@ -26,7 +29,9 @@ const io = new Server(httpServer, {
 });
 
 const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';
-let ROOT_DIR = process.cwd();
+// Isolated ROOT_DIR for each connection would be better, but we'll stick to a shared one 
+// for now as it's a single-user IDE project and easy to manage projects.
+let workspaceRoot = process.cwd();
 
 const getFiles = async (dir) => {
     try {
@@ -39,7 +44,7 @@ const getFiles = async (dir) => {
                 const stats = await fs.stat(fullPath);
                 result.push({
                     name: entry,
-                    path: path.relative(ROOT_DIR, fullPath).replace(/\\/g, '/'),
+                    path: path.relative(workspaceRoot, fullPath).replace(/\\/g, '/'),
                     isDirectory: stats.isDirectory()
                 });
             } catch (e) {
@@ -60,6 +65,9 @@ const getFiles = async (dir) => {
 
 io.on('connection', (socket) => {
     console.log('User connected');
+    
+    // Send current workspace root to client
+    socket.emit('root-path', workspaceRoot);
 
     // --- Terminal Logic ---
     const terminals = new Map();
@@ -69,7 +77,7 @@ io.on('connection', (socket) => {
             name: 'xterm-color',
             cols: 80,
             rows: 24,
-            cwd: ROOT_DIR,
+            cwd: workspaceRoot,
             env: process.env
         });
 
@@ -103,7 +111,7 @@ io.on('connection', (socket) => {
 
     // --- File System Logic ---
     socket.on('get-files', async (dir) => {
-        const targetDir = dir ? path.resolve(dir === '.' ? ROOT_DIR : path.join(ROOT_DIR, dir)) : ROOT_DIR;
+        const targetDir = dir ? path.resolve(dir === '.' ? workspaceRoot : path.join(workspaceRoot, dir)) : workspaceRoot;
         const files = await getFiles(targetDir);
         const relativePath = dir || '.';
         socket.emit('files-list', { path: relativePath, files });
@@ -111,7 +119,7 @@ io.on('connection', (socket) => {
 
     socket.on('read-file', async (relativePath) => {
         try {
-            const absolutePath = path.join(ROOT_DIR, relativePath);
+            const absolutePath = path.join(workspaceRoot, relativePath);
             const content = await fs.readFile(absolutePath, 'utf-8');
             socket.emit('file-content', { path: relativePath, content });
         } catch (err) {
@@ -121,7 +129,7 @@ io.on('connection', (socket) => {
 
     socket.on('save-file', async ({ path: relativePath, content }) => {
         try {
-            const absolutePath = path.join(ROOT_DIR, relativePath);
+            const absolutePath = path.join(workspaceRoot, relativePath);
             await fs.ensureDir(path.dirname(absolutePath));
             await fs.writeFile(absolutePath, content);
             socket.emit('save-success', relativePath);
@@ -132,7 +140,7 @@ io.on('connection', (socket) => {
 
     socket.on('create-file', async ({ path: relativePath }) => {
         try {
-            const absolutePath = path.join(ROOT_DIR, relativePath || 'Untitled.txt');
+            const absolutePath = path.join(workspaceRoot, relativePath || 'Untitled.txt');
             await fs.ensureDir(path.dirname(absolutePath));
             await fs.writeFile(absolutePath, '');
             socket.emit('save-success', relativePath);
@@ -141,9 +149,13 @@ io.on('connection', (socket) => {
         }
     });
 
+    // Support both event names for better compatibility
+    socket.on('delete-file', async (path) => socket.emit('delete-item', path));
+    socket.on('rename-file', async (data) => socket.emit('rename-item', data));
+
     socket.on('create-folder', async ({ path: relativePath }) => {
         try {
-            const absolutePath = path.join(ROOT_DIR, relativePath || 'New Folder');
+            const absolutePath = path.join(workspaceRoot, relativePath || 'New Folder');
             await fs.ensureDir(absolutePath);
             socket.emit('save-success', relativePath);
         } catch (err) {
@@ -153,7 +165,7 @@ io.on('connection', (socket) => {
 
     socket.on('delete-item', async (relativePath) => {
         try {
-            const absolutePath = path.join(ROOT_DIR, relativePath);
+            const absolutePath = path.join(workspaceRoot, relativePath);
             await fs.remove(absolutePath);
             socket.emit('item-deleted', relativePath);
         } catch (err) {
@@ -163,8 +175,8 @@ io.on('connection', (socket) => {
 
     socket.on('rename-item', async ({ oldPath, newPath }) => {
         try {
-            const oldAbs = path.join(ROOT_DIR, oldPath);
-            const newAbs = path.join(ROOT_DIR, newPath);
+            const oldAbs = path.join(workspaceRoot, oldPath);
+            const newAbs = path.join(workspaceRoot, newPath);
             await fs.move(oldAbs, newAbs);
             socket.emit('item-renamed', { oldPath, newPath });
         } catch (err) {
@@ -185,13 +197,13 @@ io.on('connection', (socket) => {
                         await searchDir(fullPath);
                     } else {
                         const content = await fs.readFile(fullPath, 'utf8');
-                        const flags = caseSensitive ? 'g' : 'gi';
+                        const flags = wholeWord ? (caseSensitive ? '' : 'i') : (caseSensitive ? 'g' : 'gi');
                         const pattern = wholeWord ? `\\b${query}\\b` : query;
                         const regex = new RegExp(pattern, flags);
                         const matches = [...content.matchAll(regex)];
                         if (matches.length > 0) {
                             results.push({
-                                path: path.relative(ROOT_DIR, fullPath).replace(/\\/g, '/'),
+                                path: path.relative(workspaceRoot, fullPath).replace(/\\/g, '/'),
                                 count: matches.length,
                                 previews: matches.slice(0, 5).map(m => {
                                     const start = Math.max(0, m.index - 20);
@@ -203,7 +215,7 @@ io.on('connection', (socket) => {
                     }
                 }
             };
-            await searchDir(ROOT_DIR);
+            await searchDir(workspaceRoot);
             socket.emit('search-results', results);
         } catch (err) {
             socket.emit('file-error', `Search failed: ${err.message}`);
@@ -214,17 +226,18 @@ io.on('connection', (socket) => {
     socket.on('open-folder', async (folderPath) => {
         const resolved = path.resolve(folderPath);
         if (await fs.pathExists(resolved)) {
-            ROOT_DIR = resolved;
+            workspaceRoot = resolved;
             // restart watcher
-            watcher.close();
+            if (watcher) watcher.close();
             setupWatcher();
             // restart pty in new dir
             terminals.forEach(term => term.kill());
             terminals.clear();
-            // send new files
-            const files = await getFiles(ROOT_DIR);
-            socket.emit('files-list', files);
-            socket.emit('folder-opened', ROOT_DIR);
+            // send new files and path
+            const files = await getFiles(workspaceRoot);
+            socket.emit('root-path', workspaceRoot);
+            socket.emit('files-list', { path: '.', files });
+            socket.emit('folder-opened', workspaceRoot);
         } else {
             socket.emit('file-error', `Folder not found: ${folderPath}`);
         }
@@ -235,14 +248,14 @@ io.on('connection', (socket) => {
     const debouncedRefresh = async () => {
         if (debounceTimer) clearTimeout(debounceTimer);
         debounceTimer = setTimeout(async () => {
-            const files = await getFiles(ROOT_DIR);
+            const files = await getFiles(workspaceRoot);
             socket.emit('files-list', { path: '.', files });
         }, 300);
     };
 
     let watcher;
     const setupWatcher = () => {
-        watcher = chokidar.watch(ROOT_DIR, {
+        watcher = chokidar.watch(workspaceRoot, {
             ignored: [/(^|[\/\\])\../, '**/node_modules/**', '**/.git/**'],
             persistent: true,
             depth: 0,
