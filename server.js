@@ -12,6 +12,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
+// Health check route
+app.get('/health', (req, res) => res.status(200).send('OK'));
+
 app.use(express.static(path.join(__dirname, 'dist')));
 app.use('/preview', (req, res, next) => {
     express.static(workspaceRoot)(req, res, next);
@@ -20,12 +24,11 @@ app.use('/preview', (req, res, next) => {
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        origin: (origin, callback) => {
-            // Allow any origin for maximum compatibility in this IDE project
-            callback(null, true);
-        },
-        methods: ["GET", "POST"]
-    }
+        origin: "*",
+        methods: ["GET", "POST"],
+        credentials: true
+    },
+    transports: ['polling', 'websocket']
 });
 
 const shell = os.platform() === 'win32' ? 'powershell.exe' : 'bash';

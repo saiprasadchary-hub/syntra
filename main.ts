@@ -189,13 +189,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    console.log(`Connecting to Antigravity Backend at: ${backendUrl || 'Local Host'}`);
+
     // Only attempt connection if we have a URL or are on localhost
     const socket = io(backendUrl || (window.location.hostname === 'localhost' ? 'http://localhost:3001' : ''), {
-        transports: ['websocket', 'polling'],
+        transports: ['polling', 'websocket'], // Try polling first for better compatibility with proxies
         reconnection: true,
-        reconnectionAttempts: 10,
-        reconnectionDelay: 2000,
-        timeout: 20000
+        reconnectionAttempts: 20,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 45000 // Increased timeout for Render wake-up
     });
 
     (window as any).AntigravitySocket = socket;
