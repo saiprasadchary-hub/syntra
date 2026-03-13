@@ -181,8 +181,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (savedUrl && savedUrl.startsWith('http')) {
             backendUrl = savedUrl;
         } else if (window.location.hostname.includes('web.app') || window.location.hostname.includes('firebaseapp.com')) {
-            // 2. If on Firebase Hosting, point to the Render backend (name from render.yaml)
-            backendUrl = 'https://antigravity-backend.onrender.com';
+            // 2. If on Firebase Hosting, point to the more unique Render backend
+            backendUrl = 'https://antigravity-syntra-ed.onrender.com';
         } else {
             // 3. Otherwise assume backend and frontend are on the same domain (e.g. both on Render)
             backendUrl = window.location.origin;
@@ -207,7 +207,15 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Socket connection error:', err);
         // Only notify if it's the first time and not on localhost
         if (window.location.hostname !== 'localhost') {
-            AntigravityAPI.notify(`Connecting to ${backendUrl}...`, 'info');
+            AntigravityAPI.notify(`Connecting to backend... (${backendUrl})`, 'info');
+        }
+    });
+
+    socket.on('connect', () => {
+        addNotification('Connected to backend server', 'success');
+        if (connStatus) {
+            connStatus.style.color = 'var(--success)';
+            connStatus.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Cloud Connected';
         }
     });
 
@@ -288,7 +296,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span style="color: var(--text-muted);">Total Characters:</span> <span>${characters}</span>
                     <span style="color: var(--text-muted);">Last Sync:</span> <span>${new Date().toLocaleTimeString()}</span>
                 </div>
-                <div style="margin-top: 20px; border-top: 1px solid var(--border); padding-top: 10px; color: var(--success);">
+                <div style="display: flex; flex-direction: column; gap: 5px; margin-top: 10px; border-top: 1px solid var(--border); padding-top: 15px;">
                     Status: All systems operational.
                 </div>
             </div>
@@ -694,7 +702,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
         },
-        openSettings: () => settingsModal?.classList.add('active'),
+        openSettings: () => {
+            const modal = document.getElementById('settings-modal');
+            if (modal) {
+                modal.classList.add('active');
+                (document.getElementById('setting-backend-url') as HTMLInputElement).value = backendUrl;
+            }
+        },
         closeSettings: () => settingsModal?.classList.remove('active'),
         saveSettings: () => {
             const fontSize = (document.getElementById('setting-font-size') as HTMLInputElement).value;
@@ -1312,7 +1326,19 @@ document.addEventListener('DOMContentLoaded', () => {
              terminalService.clear();
              addNotification('Terminal cleared', 'info');
         },
-        configureTasks: () => taskManager.configureTasks()
+        configureTasks: () => taskManager.configureTasks(),
+        saveBackendUrl: () => {
+            const input = document.getElementById('setting-backend-url') as HTMLInputElement;
+            let url = input.value.trim();
+            if (url) {
+                if (!url.startsWith('http')) url = 'https://' + url;
+                localStorage.setItem('antigravity_backend_url', url);
+                window.location.reload();
+            } else {
+                localStorage.removeItem('antigravity_backend_url');
+                window.location.reload();
+            }
+        },
     };
 
     (window as any).AntigravityAPI = AntigravityAPI;
