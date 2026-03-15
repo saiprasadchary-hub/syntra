@@ -22,25 +22,28 @@ try {
 
 const app = express();
 
-// 1. ABSOLUTELY TOP LEVEL HEALTH CHECK WITH MANUAL CORS
-app.options('*', cors()); // Enable pre-flight for all routes
-app.get('/health', (req, res) => {
+// 1. ABSOLUTELY TOP LEVEL CORS BYPASS
+app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.status(200).json({ status: 'ok', msg: 'Antigravity LIVE V5 - CORS FIXED' });
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,content-type, Authorization, Origin, Accept');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
 });
 
-// Explicit Test
+app.get('/health', (req, res) => {
+    res.status(200).json({ status: 'ok', msg: 'Antigravity LIVE V7 - UNIVERSAL CORS BYPASS' });
+});
+
 app.get('/cors-test', (req, res) => {
-    res.setHeader('Access-Control-Allow-Origin', '*');
     res.json({ message: 'CORS is working', origin: req.headers.origin });
 });
 
-// 2. Logging and standard CORS
-app.use(cors({
-    origin: '*', // For debugging, allow everything
-    credentials: true
-}));
+// Remove standard cors middleware as we are using manual headers for ultimate control
+// app.use(cors({ origin: '*', credentials: true }));
 
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
@@ -61,8 +64,12 @@ app.use('/preview', (req, res, next) => {
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        origin: true, // This will echo the request origin, which is required for credentials: true
-        methods: ["GET", "POST"],
+        origin: (origin, callback) => {
+            // Allow all origins to connect
+            callback(null, true);
+        },
+        methods: ["GET", "POST", "OPTIONS"],
+        allowedHeaders: ["X-Requested-With", "content-type", "Authorization", "Origin", "Accept"],
         credentials: true
     },
     allowEIO3: true,
