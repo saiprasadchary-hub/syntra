@@ -1,0 +1,7 @@
+node_modules
+dist
+.firebase
+*.log
+.gemini
+.DS_Store
+.env

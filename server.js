@@ -12,23 +12,23 @@ import cors from 'cors';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Import node-pty conditionally to avoid crashes on incompatible environments
+let pty;
+try {
+    pty = (await import('node-pty')).default;
+} catch (e) {
+    console.error('Failed to load node-pty. Terminal features will be disabled:', e.message);
+}
+
 const app = express();
 
-// Ultra-robust manual CORS to ensure headers are ALWAYS present
-app.use((req, res, next) => {
-    const origin = req.headers.origin;
-    // Allow all origins but echo the origin back for credentials support
-    res.setHeader('Access-Control-Allow-Origin', origin || '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Authorization');
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    
-    // Handle preflight
-    if (req.method === 'OPTIONS') {
-        return res.sendStatus(200);
-    }
-    next();
-});
+// Use the standard CORS middleware with origin reflection
+app.use(cors({
+    origin: true, // Echoes the request origin
+    credentials: true,
+    methods: ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
+}));
 
 // Logging middleware
 app.use((req, res, next) => {
@@ -36,26 +36,31 @@ app.use((req, res, next) => {
     next();
 });
 
-// Health check route
+// Explicit health check
 app.get('/health', (req, res) => {
-    res.status(200).json({ status: 'ok', uptime: process.uptime(), message: 'Antigravity Backend is healthy' });
+    res.status(200).json({ 
+        status: 'ok', 
+        message: 'Antigravity Backend is healthy',
+        timestamp: new Date().toISOString()
+    });
 });
 
-app.get('/test', (req, res) => {
-    res.status(200).send('CORS Test Successful');
+// Explicit Test
+app.get('/cors-test', (req, res) => {
+    res.json({ message: 'CORS is working', origin: req.headers.origin });
 });
 
-// Explicitly serve static files
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
 
-// Fallback for SPA
+// Static Fallback
 app.get('/', (req, res) => {
-    res.sendFile(path.join(distPath, 'index.html'), (err) => {
-        if (err) {
-            res.status(200).send('Antigravity Server is running. (Note: Build files might be missing if this is the only output)');
-        }
-    });
+    const indexPath = path.join(distPath, 'index.html');
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.status(200).send('Antigravity Server is running. (Build files not found)');
+    }
 });
 app.use('/preview', (req, res, next) => {
     express.static(workspaceRoot)(req, res, next);
@@ -117,6 +122,10 @@ io.on('connection', (socket) => {
     const terminals = new Map();
 
     socket.on('terminal-create', ({ id }) => {
+        if (!pty) {
+            socket.emit('terminal-data', { id, data: '\r\n[Error] node-pty not available on this server.\r\n' });
+            return;
+        }
         const ptyProcess = pty.spawn(shell, [], {
             name: 'xterm-color',
             cols: 80,
