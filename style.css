@@ -21,9 +21,10 @@
     --top-bar-height: 35px;
     --font-ui: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
-    --shadow-main: 0 4px 20px rgba(0,0,0,0.5);
-    --glass-bg: rgba(30, 30, 30, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.05);
+    --shadow-main: 0 10px 40px rgba(0,0,0,0.6);
+    --glass-bg: rgba(20, 20, 25, 0.85);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --card-bg: rgba(255, 255, 255, 0.03);
 }
 
 /* --- Professional Scrollbars --- */
@@ -1167,4 +1168,78 @@ body {
 .resizing {
     pointer-events: none;
     user-select: none;
+}
+/* --- Wave 4: Premium Components --- */
+.stat-card {
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    cursor: default;
+}
+.stat-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    background: rgba(255, 255, 255, 0.07) !important;
+    border-color: var(--accent) !important;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+}
+
+.palette-item.selected {
+    background: var(--accent) !important;
+    color: white !important;
+    padding-left: 20px !important;
+    transform: scale(1.01);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.auth-gate-v3 {
+    background: radial-gradient(circle at center, #1a1a2e 0%, #0d0d0d 100%);
+    overflow: hidden;
+}
+
+@keyframes matrixPulse {
+    0% { color: #00ff41; text-shadow: 0 0 5px #00ff41; }
+    50% { color: #008f11; text-shadow: 0 0 20px #00ff41; }
+    100% { color: #00ff41; text-shadow: 0 0 5px #00ff41; }
+}
+
+[data-theme='matrix'] {
+    --bg-main: #000;
+    --bg-dark: #050505;
+    --bg-darker: #000;
+    --bg-lighter: #0f0f0f;
+    --text-main: #00ff41;
+    --text-bright: #00ff41;
+    --accent: #00ff41;
+    --border: #003b00;
+}
+
+[data-theme='matrix'] * {
+    font-family: 'JetBrains Mono', monospace !important;
+    text-shadow: 0 0 2px rgba(0, 255, 65, 0.5);
+}
+
+/* Productivity: Pomodoro Glow */
+.pomodoro-active {
+    animation: pomodoroPulse 2s infinite;
+}
+
+@keyframes pomodoroPulse {
+    0% { box-shadow: 0 0 0 0 rgba(244, 135, 113, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(244, 135, 113, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(244, 135, 113, 0); }
+}
+
+/* Glass Buttons */
+.btn-glass {
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(10px);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.btn-glass:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent);
 }
