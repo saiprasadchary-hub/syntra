@@ -15,14 +15,29 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // Global CORS for Express
+const allowedOrigins = [
+    'https://syntra-ed.web.app',
+    'https://syntra-ed.firebaseapp.com',
+    'http://localhost:5173',
+    'http://localhost:3001',
+    'http://127.0.0.1:5173'
+];
+
 app.use(cors({
-    origin: (origin, callback) => {
-        // Allow all origins for now to simplify, but handle the credentials requirement
-        // In production, you'd list specific domains.
-        callback(null, true);
+    origin: function(origin, callback) {
+        // Allow requests with no origin (like mobile apps or curl requests)
+        if (!origin) return callback(null, true);
+        
+        if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('localhost') || origin.includes('127.0.0.1')) {
+            callback(null, true);
+        } else {
+            console.log('Origin not allowed by CORS:', origin);
+            callback(null, true); // Allow anyway but log it, to debug
+        }
     },
     methods: ["GET", "POST", "OPTIONS"],
-    credentials: true
+    credentials: true,
+    exposedHeaders: ["set-cookie"]
 }));
 
 // Health check route
@@ -39,13 +54,11 @@ app.use('/preview', (req, res, next) => {
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        origin: (origin, callback) => {
-            // Allow all origins but echo them back to support credentials
-            callback(null, true);
-        },
+        origin: true, // This will echo the request origin, which is required for credentials: true
         methods: ["GET", "POST"],
         credentials: true
     },
+    allowEIO3: true,
     transports: ['polling', 'websocket']
 });
 
