@@ -184,22 +184,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let backendUrl = '';
 
-    // Automatically detect backend URL
+    // Automatically detect backend URL (Only local server supported, otherwise we use Cloud Sync)
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
         backendUrl = 'http://localhost:3001';
     } else {
-        // 1. Check if user manually set a URL in localStorage
-        const savedUrl = localStorage.getItem('antigravity_backend_url');
-        
-        if (savedUrl && savedUrl.startsWith('http')) {
-            backendUrl = savedUrl;
-        } else if (window.location.hostname.includes('web.app') || window.location.hostname.includes('firebaseapp.com')) {
-            // 2. If on Firebase Hosting, point to the more unique Render backend
-            backendUrl = 'https://antigravity-syntra-ed.onrender.com';
-        } else {
-            // 3. Otherwise assume backend and frontend are on the same domain (e.g. both on Render)
-            backendUrl = window.location.origin;
-        }
+        backendUrl = ''; // Cloud Mode: files are synced via Firebase Firestore
     }
 
     console.log(`Connecting to Antigravity Backend at: ${backendUrl || 'Local Host'}`);
@@ -217,18 +206,15 @@ document.addEventListener('DOMContentLoaded', () => {
     (window as any).AntigravitySocket = socket;
 
     socket.on('connect_error', (err) => {
-        console.error('Socket connection error:', err);
-        // Only notify if it's the first time and not on localhost
-        if (window.location.hostname !== 'localhost') {
-            AntigravityAPI.notify(`Connection failed: ${err.message}. Retrying...`, 'error');
-            
-            // diagnostic fetch
-            fetch(`${backendUrl}/health`).then(r => {
-                console.log('Health check result:', r.status);
-                if (r.status === 404) {
-                    AntigravityAPI.notify('Backend returned 404. Please check the URL in Settings.', 'warning');
-                }
-            }).catch(e => console.log('Health check failed:', e));
+        if (window.location.hostname === 'localhost') {
+            console.error('Socket connection error:', err);
+            AntigravityAPI.notify(`Local Server unreachable: ${err.message}`, 'error');
+        } else {
+            console.log('Running in Cloud Mode (No local server detected)');
+            if (connStatus) {
+                connStatus.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="#ff9800"><circle cx="12" cy="12" r="10"/></svg> Cloud Active (Syncing)';
+                connStatus.style.color = '#ff9800';
+            }
         }
     });
 
@@ -783,9 +769,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const file = openFiles[activeFileIndex];
             if (file.type === 'file' && file.model) {
                 const content = file.model.getValue();
-                socket.emit('save-file', { path: file.path, content });
+                
+                if (socket.connected) {
+                    socket.emit('save-file', { path: file.path, content });
+                    addNotification(`Saved ${file.name} to server`, 'success');
+                } else {
+                    addNotification(`Auto-syncing ${file.name} to cloud...`, 'info');
+                    (window as any).AntigravityAPI.pushToCloud();
+                }
+                
                 updateTimeline(file.path, content);
-                addNotification(`Saved ${file.name}`, 'success');
                 updateProjectStats();
             }
         },
@@ -874,7 +867,17 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         openProjectFile: (path: string) => {
             updateRecentFiles(path);
-            socket.emit('read-file', path);
+            const existing = openFiles.find(f => f.path === path);
+            if (existing) {
+                activeFileIndex = openFiles.indexOf(existing);
+                AntigravityAPI.updateUI();
+                return;
+            }
+            if (socket.connected) {
+                socket.emit('read-file', path);
+            } else {
+                addNotification('Server unreachable. File may not be available unless synced to cloud.', 'warn');
+            }
         },
         goToLine: (n: number) => {
             if (monacoEditor) {
@@ -1910,6 +1913,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     workspace: workspaceData,
                     lastSynced: Date.now()
                 });
+                
+                // Update virtual explorer if no socket
+                if (!socket.connected) {
+                    (window as any).AntigravityExplorer.setVirtualFiles('.', workspaceData.map(f => ({
+                        name: f.path.split('/').pop(),
+                        path: f.path,
+                        isDirectory: false
+                    })));
+                }
+                
                 addNotification('Cloud Sync Complete', 'success');
             } catch (e) { addNotification('Sync Failed', 'warn'); }
         },
@@ -1922,6 +1935,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 for (const file of data) {
                     (window as any).AntigravityAPI.newFile(file.path.split('/').pop(), file.content, file.path);
                 }
+                
+                // Update Explorer
+                const explorerFiles = data.map(f => ({
+                    name: f.path.split('/').pop(),
+                    path: f.path,
+                    isDirectory: false
+                }));
+                (window as any).AntigravityExplorer.setVirtualFiles('.', explorerFiles);
+                
                 addNotification('Workspace Restored', 'success');
             }
         },

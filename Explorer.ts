@@ -62,6 +62,11 @@ export class Explorer {
         this.rootPath = path;
     }
 
+    public setVirtualFiles(path: string, files: any[]) {
+        this.fileTree.set(path, files);
+        this.render();
+    }
+
     public toggleFolder(path: string) {
         if (this.expandedFolders.has(path)) {
             this.expandedFolders.delete(path);
@@ -108,8 +113,9 @@ export class Explorer {
 
     private renderLevel(path: string, depth: number = 0): string {
         const files = this.fileTree.get(path);
+        const isCloudMode = window.location.hostname !== 'localhost';
         
-        if (!this.socket.connected) {
+        if (!this.socket.connected && !isCloudMode) {
             return `<div style="padding: 4px 15px 4px ${depth * 12 + 25}px; color: var(--error); font-size: 11px;">Disconnected</div>`;
         }
 
