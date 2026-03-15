@@ -1831,8 +1831,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Cloud Sync API ---
     (window as any).AntigravityAPI = {
         ...AntigravityAPI,
-        hideSplash: () => document.getElementById('splash-screen')?.classList.add('hidden'),
-        showSplash: () => document.getElementById('splash-screen')?.classList.remove('hidden'),
+        hideGate: () => document.getElementById('auth-gate')?.classList.add('hidden'),
+        showGate: () => document.getElementById('auth-gate')?.classList.remove('hidden'),
+        toggleAuthMode: (mode: 'signup' | 'login') => {
+            const title = document.getElementById('auth-title');
+            const submitBtn = document.getElementById('auth-submit-btn');
+            const switchText = document.getElementById('auth-switch');
+            if (mode === 'signup') {
+                if (title) title.textContent = 'Create Account';
+                if (submitBtn) submitBtn.textContent = 'Start Coding Now';
+                if (switchText) switchText.innerHTML = 'Already have an account? <span onclick="AntigravityAPI.toggleAuthMode(\'login\')">Sign in instead</span>';
+            } else {
+                if (title) title.textContent = 'Welcome Back';
+                if (submitBtn) submitBtn.textContent = 'Sign In to Dashboard';
+                if (switchText) switchText.innerHTML = 'Don\'t have an account? <span onclick="AntigravityAPI.toggleAuthMode(\'signup\')">Sign up for free</span>';
+            }
+        },
         signInWithGoogle: async () => {
             const provider = new GoogleAuthProvider();
             try {
@@ -1840,20 +1854,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 addNotification('Logged in with Google', 'success');
             } catch (e: any) { addNotification(e.message, 'warn'); }
         },
-        splashSignIn: async () => {
-            const email = (document.getElementById('splash-email') as HTMLInputElement).value;
-            const pass = (document.getElementById('splash-password') as HTMLInputElement).value;
+        gateSignIn: async () => {
+            const email = (document.getElementById('gate-email') as HTMLInputElement).value;
+            const pass = (document.getElementById('gate-password') as HTMLInputElement).value;
+            const isSignUp = document.getElementById('auth-title')?.textContent === 'Create Account';
             try {
-                await signInWithEmailAndPassword(auth, email, pass);
-                addNotification('Signed in successfully', 'success');
-            } catch (e: any) { addNotification(e.message, 'warn'); }
-        },
-        splashSignUp: async () => {
-            const email = (document.getElementById('splash-email') as HTMLInputElement).value;
-            const pass = (document.getElementById('splash-password') as HTMLInputElement).value;
-            try {
-                await createUserWithEmailAndPassword(auth, email, pass);
-                addNotification('Account created!', 'success');
+                if (isSignUp) {
+                    await createUserWithEmailAndPassword(auth, email, pass);
+                    addNotification('Account Created!', 'success');
+                } else {
+                    await signInWithEmailAndPassword(auth, email, pass);
+                    addNotification('Welcome Back!', 'success');
+                }
             } catch (e: any) { addNotification(e.message, 'warn'); }
         },
         openAuth: () => {
@@ -1882,7 +1894,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 (window as any).AntigravityAPI.closeAuth();
             } catch (e: any) { addNotification(e.message, 'warn'); }
         },
-        signOut: () => signOut(auth),
+        signOut: () => {
+            signOut(auth);
+            (window as any).AntigravityAPI.showGate();
+        },
         pushToCloud: async () => {
             if (!currentUser) { (window as any).AntigravityAPI.openAuth(); return; }
             addNotification('Syncing workspace to cloud...', 'info');
@@ -1927,13 +1942,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (user) {
             icon.style.color = 'var(--accent)';
             icon.title = `Signed in as ${user.email}`;
-            addNotification(`Welcome back, ${user.email}`, 'success');
+            addNotification(`Cloud Account Active: ${user.email}`, 'success');
             (window as any).AntigravityAPI.restoreFromCloud();
-            (window as any).AntigravityAPI.hideSplash();
+            (window as any).AntigravityAPI.hideGate();
         } else {
             icon.style.color = '';
             icon.title = 'Account';
-            (window as any).AntigravityAPI.showSplash();
+            (window as any).AntigravityAPI.showGate();
         }
     });
 
