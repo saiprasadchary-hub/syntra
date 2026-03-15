@@ -58,7 +58,7 @@
             </div>
         </div>
     </div>
-    <div class="modal-overlay" id="modal-overlay" onclick="AntigravityAPI.closeSettings(); AntigravityAPI.closeAuth();"></div>
+    <div class="modal-overlay" id="modal-overlay" onclick="AntigravityAPI.closeSettings(); AntigravityAPI.closeAuth(); AntigravityAPI.closeAccountPanel();"></div>
     <div class="app-container">
         <!-- Top Navigation -->
         <header class="top-menu">
@@ -510,6 +510,32 @@
                 <div style="border-top: 1px solid var(--border); margin-top: 10px; padding-top: 15px; text-align: center;">
                     <button class="btn-secondary" onclick="AntigravityAPI.closeAuth()" style="color: var(--text-muted);">Continue as Guest</button>
                 </div>
+            </div>
+        </div>
+
+        <!-- Account Profile Panel -->
+        <div id="account-panel" class="modal" style="max-width: 340px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.5" style="margin-bottom: 12px; filter: drop-shadow(0 0 12px var(--accent));">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <h2 style="color: var(--accent); margin-bottom: 6px; font-size: 18px;">Account</h2>
+                <p id="account-panel-email" style="font-size: 13px; color: var(--text-muted); word-break: break-all;">Not signed in</p>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <div style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; padding: 12px;">
+                    <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+                        <span style="color: var(--text-muted);">Status</span>
+                        <span style="color: var(--success);">● Cloud Active</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                        <span style="color: var(--text-muted);">Workspace</span>
+                        <span>Synced</span>
+                    </div>
+                </div>
+                <button class="btn-main" onclick="AntigravityAPI.signOut(); AntigravityAPI.closeAccountPanel();" style="background: #e74c3c; border: none;">Sign Out</button>
+                <button class="btn-secondary" onclick="AntigravityAPI.closeAccountPanel()" style="background: transparent; border: 1px solid var(--border); color: var(--text-muted); padding: 8px; border-radius: 4px; cursor: pointer;">Close</button>
             </div>
         </div>
 

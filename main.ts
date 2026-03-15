@@ -2395,8 +2395,20 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (e: any) { addNotification(e.message, 'warn'); }
         },
         openAuth: () => {
+             if (currentUser) {
+                 // Show account panel instead of login
+                 const emailEl = document.getElementById('account-panel-email');
+                 if (emailEl) emailEl.textContent = currentUser.email || 'Signed In';
+                 document.getElementById('account-panel')?.classList.add('active');
+                 document.getElementById('modal-overlay')?.classList.add('active');
+                 return;
+             }
              document.getElementById('auth-modal')?.classList.add('active');
              document.getElementById('modal-overlay')?.classList.add('active');
+        },
+        closeAccountPanel: () => {
+             document.getElementById('account-panel')?.classList.remove('active');
+             document.getElementById('modal-overlay')?.classList.remove('active');
         },
         closeAuth: () => {
              document.getElementById('auth-modal')?.classList.remove('active');
