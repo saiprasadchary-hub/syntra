@@ -1,7 +1,7 @@
 import express from 'express';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
-import pty from 'node-pty';
+// import pty from 'node-pty'; // Removed to avoid static build dependency
 import os from 'os';
 import fs from 'fs-extra';
 import path from 'path';
