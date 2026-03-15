@@ -220,10 +220,24 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     socket.on('connect', () => {
+        console.log('--- SOCKET CONNECTED ---');
+        console.log('ID:', socket.id);
         addNotification('Connected to backend server', 'success');
         if (connStatus) {
             connStatus.style.color = 'var(--success)';
             connStatus.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Cloud Connected';
+        }
+    });
+
+    socket.on('reconnect', (attempt) => {
+        console.log('--- SOCKET RECONNECTED ---', attempt);
+    });
+
+    socket.on('disconnect', (reason) => {
+        console.log('--- SOCKET DISCONNECTED ---', reason);
+        if (connStatus) {
+            connStatus.style.color = 'var(--error)';
+            connStatus.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Disconnected';
         }
     });
 

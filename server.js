@@ -14,39 +14,49 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Global CORS for Express
-const allowedOrigins = [
-    'https://syntra-ed.web.app',
-    'https://syntra-ed.firebaseapp.com',
-    'http://localhost:5173',
-    'http://localhost:3001',
-    'http://127.0.0.1:5173'
-];
+// Ultra-robust manual CORS to ensure headers are ALWAYS present
+app.use((req, res, next) => {
+    const origin = req.headers.origin;
+    // Allow all origins but echo the origin back for credentials support
+    res.setHeader('Access-Control-Allow-Origin', origin || '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+    res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    
+    // Handle preflight
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
 
-app.use(cors({
-    origin: function(origin, callback) {
-        // Allow requests with no origin (like mobile apps or curl requests)
-        if (!origin) return callback(null, true);
-        
-        if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('localhost') || origin.includes('127.0.0.1')) {
-            callback(null, true);
-        } else {
-            console.log('Origin not allowed by CORS:', origin);
-            callback(null, true); // Allow anyway but log it, to debug
-        }
-    },
-    methods: ["GET", "POST", "OPTIONS"],
-    credentials: true,
-    exposedHeaders: ["set-cookie"]
-}));
+// Logging middleware
+app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
+    next();
+});
 
 // Health check route
 app.get('/health', (req, res) => {
-    console.log('Health check requested');
-    res.status(200).json({ status: 'ok', uptime: process.uptime() });
+    res.status(200).json({ status: 'ok', uptime: process.uptime(), message: 'Antigravity Backend is healthy' });
 });
 
-app.use(express.static(path.join(__dirname, 'dist')));
+app.get('/test', (req, res) => {
+    res.status(200).send('CORS Test Successful');
+});
+
+// Explicitly serve static files
+const distPath = path.join(__dirname, 'dist');
+app.use(express.static(distPath));
+
+// Fallback for SPA
+app.get('/', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'), (err) => {
+        if (err) {
+            res.status(200).send('Antigravity Server is running. (Note: Build files might be missing if this is the only output)');
+        }
+    });
+});
 app.use('/preview', (req, res, next) => {
     express.static(workspaceRoot)(req, res, next);
 });
