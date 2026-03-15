@@ -44,6 +44,10 @@ export class Explorer {
 
     public refresh(path: string = '.') {
         if (this.isLoading.has(path)) return;
+        if (!this.socket.connected) {
+            // In Serverless mode, we don't 'refresh' via socket
+            return;
+        }
         this.isLoading.add(path);
         this.socket.emit('get-files', path);
         
@@ -62,8 +66,37 @@ export class Explorer {
         this.rootPath = path;
     }
 
-    public setVirtualFiles(path: string, files: any[]) {
-        this.fileTree.set(path, files);
+    public setVirtualFiles(root: string, flatFiles: any[]) {
+        // Clear old virtual data for this root
+        this.fileTree.set(root, []);
+        
+        // Group files by directory
+        flatFiles.forEach(file => {
+            const parts = file.path.split('/');
+            let currentDir = '.';
+            
+            for (let i = 0; i < parts.length - 1; i++) {
+                const dirName = parts[i];
+                const nextDir = currentDir === '.' ? dirName : `${currentDir}/${dirName}`;
+                
+                // Ensure parent directory exists in tree
+                if (!this.fileTree.has(currentDir)) this.fileTree.set(currentDir, []);
+                const siblings = this.fileTree.get(currentDir)!;
+                if (!siblings.find(s => s.name === dirName)) {
+                    siblings.push({ name: dirName, path: nextDir, isDirectory: true });
+                }
+                
+                currentDir = nextDir;
+            }
+            
+            // Add the file to its parent directory
+            if (!this.fileTree.has(currentDir)) this.fileTree.set(currentDir, []);
+            const parentFiles = this.fileTree.get(currentDir)!;
+            if (!parentFiles.find(f => f.name === file.name)) {
+                parentFiles.push({ ...file, isDirectory: false });
+            }
+        });
+        
         this.render();
     }
 
@@ -120,12 +153,18 @@ export class Explorer {
         }
 
         if (this.isLoading.has(path) || !files) {
-            if (!files) this.refresh(path);
+            if (!files && this.socket.connected) {
+                this.refresh(path);
+                return `<div style="padding: 4px 15px 4px ${depth * 12 + 25}px; color: var(--text-muted); font-size: 11px;">Loading...</div>`;
+            }
+            if (!files && !this.socket.connected) {
+                return `<div style="padding: 4px 15px 4px ${depth * 12 + 25}px; color: var(--text-muted); font-size: 11px; opacity: 0.5;">No virtual files</div>`;
+            }
             return `<div style="padding: 4px 15px 4px ${depth * 12 + 25}px; color: var(--text-muted); font-size: 11px;">Loading...</div>`;
         }
 
         if (files.length === 0) {
-            return `<div style="padding: 4px 15px 4px ${depth * 12 + 25}px; color: var(--text-muted); font-size: 11px; font-style: italic; opacity: 0.5;">Empty</div>`;
+            return `<div style="padding: 4px 15px 4px ${depth * 12 + 25}px; color: var(--text-muted); font-size: 11px; font-style: italic; opacity: 0.5;">Empty Workspace</div>`;
         }
 
         let sorted = [...files].sort((a, b) => (b.isDirectory ? 1 : 0) - (a.isDirectory ? 1 : 0) || a.name.localeCompare(b.name));
@@ -194,7 +233,12 @@ export class Explorer {
         const name = prompt('File Name:');
         if (name) {
             const fullPath = parentPath === '.' ? name : `${parentPath}/${name}`;
-            this.socket.emit('create-file', { path: fullPath });
+            if (this.socket.connected) {
+                this.socket.emit('create-file', { path: fullPath });
+            } else {
+                (window as any).AntigravityAPI?.newFile(name, '', fullPath);
+                (window as any).AntigravityAPI?.pushToCloud();
+            }
         }
     }
 
@@ -202,13 +246,23 @@ export class Explorer {
         const name = prompt('Folder Name:');
         if (name) {
             const fullPath = parentPath === '.' ? name : `${parentPath}/${name}`;
-            this.socket.emit('create-folder', { path: fullPath });
+            if (this.socket.connected) {
+                this.socket.emit('create-folder', { path: fullPath });
+            } else {
+                // For virtual folders, we just add a placeholder or update the tree
+                this.expandedFolders.add(fullPath);
+                this.render();
+            }
         }
     }
 
     public handleDelete(path: string) {
         if (confirm(`Are you sure you want to delete ${path}?`)) {
-            this.socket.emit('delete-item', path);
+            if (this.socket.connected) {
+                this.socket.emit('delete-item', path);
+            } else {
+                (window as any).AntigravityAPI?.deleteVirtualFile(path);
+            }
         }
     }
 

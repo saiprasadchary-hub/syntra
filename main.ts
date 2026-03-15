@@ -184,43 +184,72 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     let backendUrl = localStorage.getItem('antigravity_backend_url') || '';
+    
+    // Migration: Remove deprecated Render backend and update version
+    const CURRENT_VERSION = '2.0.0';
+    const storedVersion = localStorage.getItem('antigravity_version');
+    
+    if (storedVersion !== CURRENT_VERSION || backendUrl.includes('onrender.com')) {
+        console.log('Antigravity Migration: Clearing legacy storage for v' + CURRENT_VERSION);
+        localStorage.removeItem('antigravity_backend_url');
+        localStorage.setItem('antigravity_version', CURRENT_VERSION);
+        backendUrl = '';
+    }
 
     // Automatically detect backend URL
     if (!backendUrl) {
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
             backendUrl = 'http://localhost:3001';
         } else {
-            // Default Production Backend (Render)
-            backendUrl = 'https://antigravity-syntra-ed.onrender.com';
+            // Pure Cloud Mode by default in production
+            backendUrl = ''; 
         }
     }
 
-    console.log(`Connecting to Antigravity Backend: ${backendUrl}`);
-
-    const socket = io(backendUrl, {
+    if (backendUrl) {
+        console.log(`Connecting to Antigravity Backend: ${backendUrl}`);
+    } else {
+        console.log('Antigravity IDE: Running in Pure Cloud Mode (Firebase Architecture)');
+    }
+    const socket = backendUrl ? io(backendUrl, {
         transports: ['polling', 'websocket'],
         reconnection: true,
-        reconnectionAttempts: 5, // Decrease attempts to reduce log noise
+        reconnectionAttempts: 5,
         reconnectionDelay: 2000,
         reconnectionDelayMax: 10000,
         timeout: 45000
-    });
+    }) : ({
+        connected: false,
+        on: () => {},
+        emit: () => {},
+        connect: () => {},
+        disconnect: () => {},
+        id: 'serverless-active'
+    } as any);
 
     (window as any).AntigravitySocket = socket;
 
-    socket.on('connect_error', (err) => {
-        if (window.location.hostname === 'localhost') {
-            // Only show detailed errors on local
-            console.warn('Backend connection error (local):', err.message);
-        } else {
-            // In production, failed backend connection means we stay in Cloud Mode
-            if (connStatus && !connStatus.innerText.includes('Syncing')) {
-                console.log('Running in Cloud Mode (Backend server unreachable)');
-                connStatus.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="#ff9800"><circle cx="12" cy="12" r="10"/></svg> Cloud Active (Syncing)';
-                connStatus.style.color = '#ff9800';
+    if (socket.on) {
+        socket.on('connect_error', (err: any) => {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                console.warn('Backend connection error (local):', err.message);
+            } else if (backendUrl) {
+                console.log('Running in Cloud Mode (Custom Backend server unreachable)');
+                if (connStatus) {
+                    connStatus.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="#ff9800"><circle cx="12" cy="12" r="10"/></svg> Cloud Sync Active';
+                    connStatus.style.color = '#ff9800';
+                }
             }
+        });
+    }
+
+    // Initial Status for Pure Cloud Mode
+    if (!backendUrl && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        if (connStatus) {
+            connStatus.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="var(--success)"><circle cx="12" cy="12" r="10"/></svg> Cloud Active';
+            connStatus.style.color = 'var(--success)';
         }
-    });
+    }
 
     socket.on('connect', () => {
         console.log('--- SOCKET CONNECTED ---');
@@ -444,9 +473,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 activeFileIndex = openFiles.length - 1;
             } else {
                 activeFileIndex = existingIndex;
+                if (content && openFiles[activeFileIndex].model) {
+                    openFiles[activeFileIndex].model!.setValue(content);
+                }
             }
             AntigravityAPI.updateUI();
+            if (!socket.connected) AntigravityAPI.syncExplorer();
             addNotification(`Opened ${name}`);
+        },
+        deleteVirtualFile: (path: string) => {
+            const index = openFiles.findIndex(f => f.path === path);
+            if (index !== -1) {
+                openFiles[index].model?.dispose();
+                openFiles.splice(index, 1);
+                if (activeFileIndex >= openFiles.length) activeFileIndex = openFiles.length - 1;
+            }
+            AntigravityAPI.updateUI();
+            AntigravityAPI.syncExplorer();
+            AntigravityAPI.pushToCloud();
+            addNotification(`Deleted ${path}`, 'info');
+        },
+        syncExplorer: () => {
+            if (socket.connected) return;
+            const virtualFiles = openFiles.filter(f => f.type === 'file').map(f => ({
+                name: f.name,
+                path: f.path,
+                isDirectory: false
+            }));
+            (window as any).AntigravityExplorer.setVirtualFiles('.', virtualFiles);
         },
         openExtension: (ext: any) => {
             const path = `extension:${ext.id}`;
@@ -2273,8 +2327,8 @@ document.addEventListener('DOMContentLoaded', () => {
         openDevTools: () => { addNotification('Press F12 to open browser DevTools', 'info'); },
         reloadPage: () => { window.location.reload(); },
         hardReload: () => { window.location.href = window.location.href; },
-        showAbout: () => { addNotification('Antigravity IDE v1.5.0 — Built with ❤️ by Syntra', 'success'); },
-        showVersion: () => { addNotification('Version 1.5.0-stable | Monaco Editor | Firebase Cloud Sync', 'info'); },
+        showAbout: () => { addNotification('Antigravity IDE v2.0.0-Serverless — Built with ❤️ by Syntra', 'success'); },
+        showVersion: () => { addNotification('Version 2.0.0-Serverless | Monaco | Cloud Persistence', 'info'); },
         showChangelog: () => { addNotification('Changelog: 200+ features, cloud sync, AI chat, bookmarks, themes, and more!', 'info'); },
         showKeyboardShortcuts: () => {
             addNotification('Ctrl+S Save | Ctrl+P Quick Open | Ctrl+Shift+P Commands | Ctrl+B Sidebar | Ctrl+` Terminal', 'info');
@@ -2370,49 +2424,83 @@ document.addEventListener('DOMContentLoaded', () => {
             signOut(auth);
             AntigravityAPI.showGate();
         },
-        pushToCloud: async () => {
-            if (!currentUser) { AntigravityAPI.openAuth(); return; }
-            addNotification('Syncing workspace to cloud...', 'info');
+
+        restoreFromCloud: async () => {
+            const localData = localStorage.getItem('antigravity_workspace_fallback');
+            if (localData) {
+                const data = JSON.parse(localData);
+                openFiles = openFiles.filter(f => f.type === 'extension');
+                for (const file of data) {
+                    AntigravityAPI.newFile(file.path.split('/').pop(), file.content, file.path);
+                }
+                if (!socket.connected) AntigravityAPI.syncExplorer();
+                addNotification('Restored from local cache');
+            }
+
+            if (!currentUser) {
+                // For Guest/Demo
+                if (openFiles.length <= 1) { // Only if empty
+                    AntigravityAPI.newFile('Welcome.md', '# Welcome to Antigravity (Demo Mode)\n\nYou are running in Pure Cloud Mode as a guest. All changes are temporary unless you sign in.');
+                    AntigravityAPI.newFile('main.ts', '// Demo Script\nconsole.log("Antigravity is ready!");');
+                }
+                return;
+            }
+
+            addNotification('Syncing with cloud...', 'info');
             try {
-                const workspaceData = openFiles.filter(f => f.type === 'file').map(f => ({
-                    path: f.path,
-                    content: f.model?.getValue() || ''
-                }));
+                const snap = await getDoc(doc(db, 'users', (currentUser as any).uid));
+                if (snap.exists() && snap.data()?.workspace) {
+                    const data = snap.data().workspace as any[];
+                    // If cloud is newer/different, we could merge here. For now, trust cloud if it has data.
+                    if (data.length > 0) {
+                        openFiles = openFiles.filter(f => f.type === 'extension'); 
+                        for (const file of data) {
+                            AntigravityAPI.newFile(file.path.split('/').pop(), file.content, file.path);
+                        }
+                    } else {
+                        // Populate empty cloud workspaces
+                        if (openFiles.length <= 1) {
+                            AntigravityAPI.newFile('Welcome.md', '# Welcome to Antigravity\n\nThis is your pure cloud workspace. All changes are saved to Firebase.\n\n- Create files via Explorer context menu\n- Use Ctrl+S to force sync\n- Enjoy local-free development!');
+                            AntigravityAPI.newFile('main.ts', '// Welcome to Serverless Antigravity\nconsole.log("Hello from the Cloud!");');
+                            AntigravityAPI.pushToCloud();
+                        }
+                    }
+                    if (!socket.connected) AntigravityAPI.syncExplorer();
+                    addNotification('Cloud Sync Complete', 'success');
+                } else {
+                    // Brand new user document
+                    if (openFiles.length <= 1) {
+                        AntigravityAPI.newFile('Welcome.md', '# Getting Started\n\nWelcome to your new Antigravity workspace!');
+                        AntigravityAPI.pushToCloud();
+                    }
+                }
+            } catch (e) {
+                console.warn('Cloud restore failed (offline?):', e);
+                addNotification('Working in Offline Mode', 'info');
+                if (openFiles.length <= 1) {
+                    AntigravityAPI.newFile('Welcome.md', '# Offline Mode Active\n\nCould not reach the cloud servers. Any changes made now will only be saved locally in Chrome until a connection is restored.');
+                    if (!socket.connected) AntigravityAPI.syncExplorer();
+                }
+            }
+        },
+        pushToCloud: async () => {
+             const workspaceData = openFiles.filter(f => f.type === 'file').map(f => ({
+                name: f.name,
+                path: f.path,
+                content: f.model?.getValue() || ''
+            }));
+            
+            // Always save to local fallback
+            localStorage.setItem('antigravity_workspace_fallback', JSON.stringify(workspaceData));
+
+            if (!currentUser) return;
+            try {
                 await setDoc(doc(db, 'users', (currentUser as any).uid), {
                     workspace: workspaceData,
                     lastSynced: Date.now()
                 });
-                
-                if (!socket.connected) {
-                    (window as any).AntigravityExplorer.setVirtualFiles('.', workspaceData.map(f => ({
-                        name: f.path.split('/').pop(),
-                        path: f.path,
-                        isDirectory: false
-                    })));
-                }
-                
-                addNotification('Cloud Sync Complete', 'success');
-            } catch (e) { addNotification('Sync Failed', 'warn'); }
-        },
-        restoreFromCloud: async () => {
-            if (!currentUser) return;
-            addNotification('Downloading cloud workspace...', 'info');
-            const snap = await getDoc(doc(db, 'users', (currentUser as any).uid));
-            if (snap.exists() && snap.data()?.workspace) {
-                const data = snap.data().workspace as any[];
-                for (const file of data) {
-                    AntigravityAPI.newFile(file.path.split('/').pop(), file.content, file.path);
-                }
-                
-                const explorerFiles = data.map(f => ({
-                    name: f.path.split('/').pop(),
-                    path: f.path,
-                    isDirectory: false
-                }));
-                (window as any).AntigravityExplorer.setVirtualFiles('.', explorerFiles);
-                
-                addNotification('Workspace Restored', 'success');
-            }
+                if (!socket.connected) AntigravityAPI.syncExplorer();
+            } catch (e) { console.warn('Cloud push failed'); }
         },
         importFromGitHub: () => {
             const url = (document.getElementById('github-repo-url') as HTMLInputElement).value;
@@ -3038,7 +3126,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 icon.title = `Signed in as ${user.email}`;
             }
             addNotification(`Cloud Synced: ${user.email}`, 'success');
-            AntigravityAPI.restoreFromCloud();
             AntigravityAPI.hideGate();
             const welcome = document.querySelector('.dashboard h1');
             if (welcome) welcome.textContent = `Welcome back, ${user.email.split('@')[0]}!`;
@@ -3049,6 +3136,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             AntigravityAPI.showGate();
         }
+        // Always try to restore (handles local cache and guest demo files)
+        AntigravityAPI.restoreFromCloud();
     });
 
     AntigravityAPI.updateDashboard();
