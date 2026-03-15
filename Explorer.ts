@@ -10,6 +10,8 @@ export class Explorer {
     private isLoading: Set<string> = new Set();
     private rootPath: string = '';
 
+    private loadTimeouts: Map<string, any> = new Map();
+
     constructor(socket: Socket, containerId: string) {
         this.socket = socket;
         this.container = document.getElementById(containerId) as HTMLElement;
@@ -32,13 +34,28 @@ export class Explorer {
             const { path, files } = data;
             this.fileTree.set(path, files);
             this.isLoading.delete(path);
+            if (this.loadTimeouts.has(path)) {
+                clearTimeout(this.loadTimeouts.get(path));
+                this.loadTimeouts.delete(path);
+            }
             this.render();
         });
     }
 
     public refresh(path: string = '.') {
+        if (this.isLoading.has(path)) return;
         this.isLoading.add(path);
         this.socket.emit('get-files', path);
+        
+        // Timeout to prevent infinite "Loading..."
+        const timeout = setTimeout(() => {
+            if (this.isLoading.has(path)) {
+                this.isLoading.delete(path);
+                this.render();
+                console.warn(`Explorer refresh timed out for path: ${path}`);
+            }
+        }, 8000);
+        this.loadTimeouts.set(path, timeout);
     }
 
     public setRootPath(path: string) {
@@ -108,7 +125,11 @@ export class Explorer {
         let sorted = [...files].sort((a, b) => (b.isDirectory ? 1 : 0) - (a.isDirectory ? 1 : 0) || a.name.localeCompare(b.name));
 
         if (this.filter) {
-            sorted = sorted.filter(f => f.name.toLowerCase().includes(this.filter) || (f.isDirectory && this.expandedFolders.has(f.path)));
+            sorted = sorted.filter(f => {
+                const matches = f.name.toLowerCase().includes(this.filter);
+                // If it's a directory and expanded, or matches, keep it
+                return matches || (f.isDirectory && this.expandedFolders.has(f.path));
+            });
         }
 
         return sorted.map(file => {

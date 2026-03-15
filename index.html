@@ -9,6 +9,38 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body data-theme="dark">
+    <div id="splash-screen">
+        <div class="splash-card">
+            <div style="margin-bottom: 30px;">
+                <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" style="filter: drop-shadow(0 0 10px var(--accent));">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                </svg>
+                <h1 style="font-size: 28px; margin-top: 15px; letter-spacing: -1px; color: white;">Antigravity IDE</h1>
+                <p style="color: var(--text-muted); font-size: 14px;">The elite cloud coding experience.</p>
+            </div>
+
+            <div class="splash-input-group">
+                <input type="email" id="splash-email" class="chat-input" placeholder="Email Address">
+                <input type="password" id="splash-password" class="chat-input" placeholder="Password">
+                <button class="btn-main" style="width: 100%; height: 45px; font-size: 15px;" onclick="AntigravityAPI.splashSignIn()">Login to Workspace</button>
+            </div>
+
+            <div class="splash-divider">OR</div>
+
+            <button class="google-btn" onclick="AntigravityAPI.signInWithGoogle()">
+                <svg width="20" height="20" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+                Continue with Google
+            </button>
+
+            <p style="margin-top: 25px; font-size: 12px; color: var(--text-muted);">
+                New here? <span style="color: var(--accent); cursor: pointer;" onclick="AntigravityAPI.splashSignUp()">Create Account</span>
+            </p>
+            <p style="margin-top: 10px; font-size: 11px; color: var(--text-muted); opacity: 0.6; cursor: pointer;" onclick="AntigravityAPI.hideSplash()">
+                Enter as Guest
+            </p>
+        </div>
+    </div>
+    <div class="modal-overlay" id="modal-overlay" onclick="AntigravityAPI.closeSettings(); AntigravityAPI.closeAuth();"></div>
     <div class="app-container">
         <!-- Top Navigation -->
         <header class="top-menu">
@@ -66,7 +98,7 @@
                 <div class="activity-icon" title="Database" id="btn-db-nav">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
                 </div>
-                <div class="activity-icon" title="Account" style="margin-top: auto;">
+                <div class="activity-icon" title="Account" style="margin-top: auto;" onclick="AntigravityAPI.openAuth()">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 </div>
                 <div style="flex: 1;"></div>
@@ -108,9 +140,18 @@
                 </div>
                 <div id="view-source-control" class="sidebar-view">
                     <div class="sidebar-header">Source Control</div>
-                    <div style="padding: 20px; text-align: center;">
-                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">The folder currently open doesn't have a git repository.</p>
-                        <button id="btn-init-repo" style="background: var(--accent); border: none; color: white; padding: 6px 15px; border-radius: 4px; cursor: pointer;" onclick="AntigravityAPI.initGit()">Initialize Repository</button>
+                    <div style="padding: 15px;">
+                        <div style="background: var(--bg-lighter); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 20px;">
+                            <div style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">REMOTE REPOSITORY</div>
+                            <input type="text" id="github-repo-url" class="chat-input" placeholder="https://github.com/user/repo" style="margin-bottom: 10px; font-size: 11px;">
+                            <button class="btn-main" style="width: 100%; border-radius: 4px;" onclick="AntigravityAPI.importFromGitHub()">Import from GitHub</button>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 10px;">
+                            <div style="font-size: 11px; font-weight: 600; color: var(--accent);">STAGED CHANGES</div>
+                            <div style="padding: 10px; background: var(--bg-dark); border-radius: 4px; border: 1px dashed var(--border); text-align: center; font-size: 11px; color: var(--text-muted);">No staged changes</div>
+                            <textarea id="commit-message" class="chat-input" placeholder="Commit message..." style="height: 60px; font-size: 11px; margin-top: 10px;"></textarea>
+                            <button class="btn-primary" style="width: 100%;" onclick="AntigravityAPI.pushToCloud()">Sync & Push to Cloud</button>
+                        </div>
                     </div>
                 </div>
                 <div id="view-extensions" class="sidebar-view">
@@ -122,14 +163,21 @@
                         <button class="btn-secondary" onclick="AntigravityAPI.toggleBase64()">Base64 Converter</button>
                         <button class="btn-secondary" onclick="AntigravityAPI.generateUUID()">UUID Generator</button>
                         <button class="btn-secondary" onclick="AntigravityAPI.testRegex()">Regex Tester</button>
+                        <button class="btn-secondary" onclick="AntigravityAPI.textAction('sql-format')">SQL Formatter</button>
                         <button class="btn-secondary" onclick="AntigravityAPI.colorPicker()">Color Picker</button>
                     </div>
                     <div class="sidebar-header" style="border-top: 1px solid var(--border); margin-top: 10px;">Utilities</div>
                     <div id="utilities-container" style="padding: 10px; display: flex; flex-direction: column; gap: 5px;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px;">
+                            <button class="btn-secondary" onclick="AntigravityAPI.textAction('uppercase')">UPPER</button>
+                            <button class="btn-secondary" onclick="AntigravityAPI.textAction('lowercase')">lower</button>
+                        </div>
                         <button class="btn-secondary" onclick="AntigravityAPI.textAction('trim')">Trim Whitespace</button>
                         <button class="btn-secondary" onclick="AntigravityAPI.textAction('reverse')">Reverse Lines</button>
                         <button class="btn-secondary" onclick="AntigravityAPI.textAction('stats')">Word/Char Count</button>
                         <button class="btn-secondary" onclick="AntigravityAPI.textAction('lorem')">Insert Lorem Ipsum</button>
+                        <button class="btn-secondary" onclick="AntigravityAPI.textAction('jwt')">JWT Decode Selection</button>
+                        <button class="btn-secondary" onclick="AntigravityAPI.textAction('base64-decode')">Base64 Decode</button>
                     </div>
                     <div class="sidebar-header" style="border-top: 1px solid var(--border); margin-top: 10px;">Snippet Library</div>
                     <div id="snippets-container" style="padding: 10px; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; flex: 1;">
@@ -138,12 +186,29 @@
                         <div class="snippet-item" onclick="AntigravityAPI.insertSnippet('try')" style="padding: 6px 10px; background: var(--bg-lighter); border-radius: 4px; cursor: pointer; font-size: 11px;">Try/Catch Block</div>
                         <div class="snippet-item" onclick="AntigravityAPI.insertSnippet('fetch')" style="padding: 6px 10px; background: var(--bg-lighter); border-radius: 4px; cursor: pointer; font-size: 11px;">Async Fetch</div>
                         <div class="snippet-item" onclick="AntigravityAPI.insertSnippet('express')" style="padding: 6px 10px; background: var(--bg-lighter); border-radius: 4px; cursor: pointer; font-size: 11px;">Express Server</div>
+                        <div class="snippet-item" onclick="AntigravityAPI.insertSnippet('react')" style="padding: 6px 10px; background: var(--bg-lighter); border-radius: 4px; cursor: pointer; font-size: 11px;">React Component</div>
+                        <div class="snippet-item" onclick="AntigravityAPI.insertSnippet('html5')" style="padding: 6px 10px; background: var(--bg-lighter); border-radius: 4px; cursor: pointer; font-size: 11px;">HTML5 Template</div>
+                        <div class="snippet-item" onclick="AntigravityAPI.insertSnippet('arrow')" style="padding: 6px 10px; background: var(--bg-lighter); border-radius: 4px; cursor: pointer; font-size: 11px;">Arrow Function</div>
                     </div>
                 </div>
                 <div id="view-database" class="sidebar-view">
-                    <div class="sidebar-header">Database</div>
-                    <div style="padding: 20px; text-align: center; color: var(--text-muted);">
-                        Connect to a database to explore tables and queries.
+                    <div class="sidebar-header">Database Explorer</div>
+                    <div style="padding: 15px;">
+                        <div id="db-connect-form">
+                            <input type="text" id="db-conn-str" class="chat-input" placeholder="mongodb://localhost:27017" style="margin-bottom: 10px; font-size: 11px; padding: 6px;">
+                            <button class="btn-main" style="width: 100%; border-radius: 4px;" onclick="AntigravityAPI.connectDB()">Connect</button>
+                        </div>
+                        <div id="db-content" style="display: none; margin-top: 15px;">
+                            <div style="color: var(--accent); font-size: 10px; font-weight: 600; text-transform: uppercase; margin-bottom: 8px;">Collections / Tables</div>
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                <div class="file-item" style="font-size: 11px; padding: 5px 8px; border-radius: 4px; border: 1px solid transparent;" onmouseover="this.style.background='var(--bg-lighter)'" onmouseout="this.style.background='transparent'">users</div>
+                                <div class="file-item" style="font-size: 11px; padding: 5px 8px; border-radius: 4px; border: 1px solid transparent;" onmouseover="this.style.background='var(--bg-lighter)'" onmouseout="this.style.background='transparent'">orders</div>
+                                <div class="file-item" style="font-size: 11px; padding: 5px 8px; border-radius: 4px; border: 1px solid transparent;" onmouseover="this.style.background='var(--bg-lighter)'" onmouseout="this.style.background='transparent'">products</div>
+                            </div>
+                            <div style="margin-top: 15px; border-top: 1px solid var(--border); padding-top: 15px;">
+                                <button class="btn-secondary" style="width: 100%; font-size: 10px;" onclick="addNotification('Running query...', 'info')">Run Query</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div id="view-run-debug" class="sidebar-view">
@@ -296,9 +361,17 @@
                 <div id="selection-stat" class="status-item" style="display: none;"></div>
                 <div class="status-item" id="editor-language" style="cursor: pointer; color: var(--accent);">Plain Text</div>
                 <div class="status-item" onclick="AntigravityAPI.changeIndentation()" style="cursor: pointer;">Spaces: 4</div>
+                <div class="status-item" id="cloud-sync-status" onclick="AntigravityAPI.pushToCloud()" title="Sync now">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19c.7-1.3 1.1-2.8 1.1-4.5 0-4.7-3.8-8.5-8.5-8.5-1.5 0-2.8.4-4 1.1"/><path d="M6.5 5c-.7 1.3-1.1 2.8-1.1 4.5 0 4.7 3.8 8.5 8.5 8.5 1.5 0 2.8-.4 4-1.1"/><polyline points="11 1 11 9 3 9"/><polyline points="13 23 13 15 21 15"/></svg>
+                    Cloud Sync
+                </div>
                 <div class="status-item" onclick="AntigravityAPI.changeEncoding()" style="cursor: pointer;">UTF-8</div>
                 <div class="status-item" onclick="AntigravityAPI.changeLineEndings()" style="cursor: pointer;">LF</div>
                 <div class="status-item" id="go-live" style="background: var(--accent); color: white; padding: 0 10px; border-radius: 2px; height: 20px; line-height: 20px; font-weight: 600; cursor: pointer;">Go Live</div>
+                <div class="status-item" onclick="addNotification('Workspace link copied to clipboard!', 'success')" style="cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                    Share
+                </div>
                 <div class="status-item" onclick="AntigravityAPI.toggleZenMode()" title="Toggle Zen Mode" style="cursor: pointer; opacity: 0.8;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
                 </div>
@@ -326,6 +399,25 @@
                         <option value="monokai">Monokai</option>
                         <option value="dracula">Dracula</option>
                         <option value="onedark">One Dark</option>
+                        <option value="cyberpunk">Cyberpunk Neon</option>
+                        <option value="aura">Aura Purple</option>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Font Family</span>
+                    <select id="setting-font-family" style="background: var(--bg-lighter); border: 1px solid var(--border); color: white; padding: 4px;">
+                        <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+                        <option value="'Fira Code', monospace">Fira Code</option>
+                        <option value="'Roboto Mono', monospace">Roboto Mono</option>
+                        <option value="'Inter', sans-serif">Inter UI</option>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <span>Cursor Style</span>
+                    <select id="setting-cursor-style" style="background: var(--bg-lighter); border: 1px solid var(--border); color: white; padding: 4px;">
+                        <option value="line">Line</option>
+                        <option value="block">Block</option>
+                        <option value="underline">Underline</option>
                     </select>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">
@@ -374,6 +466,23 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="cursor: pointer;" onclick="document.getElementById('live-preview-panel').style.display = 'none'"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </div>
             <iframe id="preview-iframe" style="width: 100%; height: calc(100% - 35px); border: none;"></iframe>
+        </div>
+
+        <!-- Auth Modal -->
+        <div id="auth-modal" class="modal">
+            <div style="text-align: center; margin-bottom: 25px;">
+                <h1 style="color: var(--accent); margin-bottom: 10px;">Cloud Login</h1>
+                <p style="font-size: 12px; color: var(--text-muted);">Access your workspaces from anywhere</p>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <input type="email" id="auth-email" class="chat-input" placeholder="Email (e.g. kspchary077@gmail.com)">
+                <input type="password" id="auth-password" class="chat-input" placeholder="Password">
+                <button class="btn-main" onclick="AntigravityAPI.signIn()">Sign In</button>
+                <button class="btn-secondary" onclick="AntigravityAPI.signUp()" style="background: transparent; border: 1px solid var(--border);">Create Account</button>
+                <div style="border-top: 1px solid var(--border); margin-top: 10px; padding-top: 15px; text-align: center;">
+                    <button class="btn-secondary" onclick="AntigravityAPI.closeAuth()" style="color: var(--text-muted);">Continue as Guest</button>
+                </div>
+            </div>
         </div>
 
         <div id="notification-container"></div>
