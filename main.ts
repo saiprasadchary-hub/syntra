@@ -30,7 +30,8 @@ import {
     signOut, 
     User,
     GoogleAuthProvider,
-    signInWithPopup 
+    signInWithPopup,
+    signInWithRedirect 
 } from 'firebase/auth';
 import { doc, setDoc, getDoc } from 'firebase/firestore';
 
@@ -2194,8 +2195,13 @@ document.addEventListener('DOMContentLoaded', () => {
         signInWithGoogle: async () => {
             const provider = new GoogleAuthProvider();
             try {
-                await signInWithPopup(auth, provider);
-                addNotification('Logged in with Google', 'success');
+                if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                    // Use Redirect in production to avoid COOP/Popup issues
+                    await signInWithRedirect(auth, provider);
+                } else {
+                    await signInWithPopup(auth, provider);
+                    addNotification('Logged in with Google', 'success');
+                }
             } catch (e: any) { addNotification(e.message, 'warn'); }
         },
         gateSignIn: async () => {

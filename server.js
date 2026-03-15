@@ -49,17 +49,20 @@ app.get('/cors-test', (req, res) => {
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
 
-// Static Fallback
-app.get('/', (req, res) => {
+// Custom Preview Route
+app.use('/preview', (req, res, next) => {
+    // Note: workspaceRoot might need to be set properly per user session in a real multi-user app
+    express.static(workspaceRoot)(req, res, next);
+});
+
+// Catch-all route to serve index.html for SPA behavior and prevent 404s
+app.get('*', (req, res) => {
     const indexPath = path.join(distPath, 'index.html');
     if (fs.existsSync(indexPath)) {
         res.sendFile(indexPath);
     } else {
-        res.status(200).send('Antigravity Server is running. (Build files not found)');
+        res.status(200).send('Antigravity Server is running. (Status: ONLINE, Static Build: MISSING)');
     }
-});
-app.use('/preview', (req, res, next) => {
-    express.static(workspaceRoot)(req, res, next);
 });
 
 const httpServer = createServer(app);
