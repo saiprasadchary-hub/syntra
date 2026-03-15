@@ -182,36 +182,39 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    let backendUrl = '';
+    let backendUrl = localStorage.getItem('antigravity_backend_url') || '';
 
-    // Automatically detect backend URL (Only local server supported, otherwise we use Cloud Sync)
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        backendUrl = 'http://localhost:3001';
-    } else {
-        backendUrl = ''; // Cloud Mode: files are synced via Firebase Firestore
+    // Automatically detect backend URL
+    if (!backendUrl) {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            backendUrl = 'http://localhost:3001';
+        } else {
+            // Default Production Backend (Render)
+            backendUrl = 'https://antigravity-syntra-ed.onrender.com';
+        }
     }
 
-    console.log(`Connecting to Antigravity Backend at: ${backendUrl || 'Local Host'}`);
+    console.log(`Connecting to Antigravity Backend: ${backendUrl}`);
 
-    // Only attempt connection if we have a URL or are on localhost
-    const socket = io(backendUrl || (window.location.hostname === 'localhost' ? 'http://localhost:3001' : ''), {
-        transports: ['polling', 'websocket'], // Try polling first for better compatibility with proxies
+    const socket = io(backendUrl, {
+        transports: ['polling', 'websocket'],
         reconnection: true,
-        reconnectionAttempts: 20,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        timeout: 45000 // Increased timeout for Render wake-up
+        reconnectionAttempts: 5, // Decrease attempts to reduce log noise
+        reconnectionDelay: 2000,
+        reconnectionDelayMax: 10000,
+        timeout: 45000
     });
 
     (window as any).AntigravitySocket = socket;
 
     socket.on('connect_error', (err) => {
         if (window.location.hostname === 'localhost') {
-            console.error('Socket connection error:', err);
-            AntigravityAPI.notify(`Local Server unreachable: ${err.message}`, 'error');
+            // Only show detailed errors on local
+            console.warn('Backend connection error (local):', err.message);
         } else {
-            console.log('Running in Cloud Mode (No local server detected)');
-            if (connStatus) {
+            // In production, failed backend connection means we stay in Cloud Mode
+            if (connStatus && !connStatus.innerText.includes('Syncing')) {
+                console.log('Running in Cloud Mode (Backend server unreachable)');
                 connStatus.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="#ff9800"><circle cx="12" cy="12" r="10"/></svg> Cloud Active (Syncing)';
                 connStatus.style.color = '#ff9800';
             }
