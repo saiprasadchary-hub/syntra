@@ -34,15 +34,26 @@
     --accent: #007acc;
 }
 
-[data-theme='midnight'] {
-    --bg-main: #0b0e14;
-    --bg-dark: #07090d;
-    --bg-darker: #040508;
-    --bg-lighter: #151a24;
-    --text-main: #a9b1d6;
-    --text-bright: #c0caf5;
-    --border: #1b1e2e;
-    --accent: #7aa2f7;
+[data-theme='dracula'] {
+    --bg-main: #282a36;
+    --bg-dark: #1e1f29;
+    --bg-darker: #191a21;
+    --bg-lighter: #44475a;
+    --text-main: #f8f8f2;
+    --text-bright: #ffffff;
+    --border: #44475a;
+    --accent: #bd93f9;
+}
+
+[data-theme='onedark'] {
+    --bg-main: #282c34;
+    --bg-dark: #21252b;
+    --bg-darker: #181a1f;
+    --bg-lighter: #353b45;
+    --text-main: #abb2bf;
+    --text-bright: #ffffff;
+    --border: #31353f;
+    --accent: #61afef;
 }
 
 * {
@@ -574,9 +585,18 @@ body {
     display: none;
     flex-direction: column;
     overflow: auto;
-    padding: 20px;
+    padding: 30px;
     color: var(--text-main);
+    line-height: 1.6;
 }
+
+.markdown-content h1 { font-size: 2em; margin-bottom: 20px; color: var(--text-bright); border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+.markdown-content h2 { font-size: 1.5em; margin-top: 24px; margin-bottom: 16px; color: var(--text-bright); }
+.markdown-content p { margin-bottom: 16px; }
+.markdown-content code { background: var(--bg-lighter); padding: 2px 5px; border-radius: 4px; font-family: var(--font-mono); }
+.markdown-content pre { background: var(--bg-darker); padding: 15px; border-radius: 8px; overflow-x: auto; margin-bottom: 16px; }
+.markdown-content ul { margin-left: 20px; margin-bottom: 16px; }
+.markdown-content blockquote { border-left: 4px solid var(--accent); padding-left: 15px; color: var(--text-muted); font-style: italic; }
 
 /* --- Extension Marketplace Overhaul --- */
 .ext-categories-wrapper::-webkit-scrollbar {

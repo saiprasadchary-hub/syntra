@@ -1,6 +1,7 @@
 import { io } from 'socket.io-client';
 import 'xterm/css/xterm.css';
 import * as monaco from 'monaco-editor';
+import { marked } from 'marked';
 
 // Vite worker loaders for Monaco
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
@@ -1361,6 +1362,102 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.reload();
             }
         },
+        // --- PRO FEATURES (Surge Part 1) ---
+        toggleMarkdownPreview: () => {
+            const previewEl = document.getElementById('markdown-preview');
+            const editorEl = document.getElementById('monaco-editor-container');
+            if (!previewEl || !editorEl) return;
+            
+            if (previewEl.style.display === 'none') {
+                previewEl.style.display = 'block';
+                AntigravityAPI.updateMarkdownPreview();
+            } else {
+                previewEl.style.display = 'none';
+            }
+            window.dispatchEvent(new Event('resize'));
+        },
+        updateMarkdownPreview: () => {
+            const activeFile = openFiles[activeFileIndex];
+            const previewBody = document.getElementById('preview-body');
+            if (!activeFile?.model || !previewBody) return;
+            
+            const content = activeFile.model.getValue();
+            previewBody.innerHTML = marked.parse(content) as string;
+        },
+        formatJSON: () => {
+            const model = monacoEditor?.getModel();
+            if (!model) return;
+            try {
+                const val = JSON.parse(model.getValue());
+                model.setValue(JSON.stringify(val, null, 4));
+                addNotification('JSON formatted successfully', 'success');
+            } catch (e) {
+                addNotification('Invalid JSON', 'warn');
+            }
+        },
+        toggleBase64: () => {
+            if (!monacoEditor) return;
+            const selection = monacoEditor.getSelection();
+            if (!selection) return;
+            const model = monacoEditor.getModel();
+            if (!model) return;
+            const text = model.getValueInRange(selection);
+            try {
+                const result = btoa(text); // Basic encode for now
+                monacoEditor.executeEdits('Antigravity', [{ range: selection, text: result }]);
+                addNotification('Converted to Base64', 'success');
+            } catch (e) {
+                addNotification('Base64 Conversion failed', 'warn');
+            }
+        },
+        generateUUID: () => {
+            const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+                const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+            if (monacoEditor) {
+                const selection = monacoEditor.getSelection();
+                if (selection) {
+                    monacoEditor.executeEdits('Antigravity', [{ range: selection, text: uuid }]);
+                }
+            }
+            addNotification('UUID Generated and inserted', 'success');
+        },
+        testRegex: () => {
+            const pattern = prompt('Enter Regex pattern:');
+            if (!pattern) return;
+            const activeFile = openFiles[activeFileIndex];
+            if (!activeFile?.model) return;
+            try {
+                const regex = new RegExp(pattern, 'g');
+                const content = activeFile.model.getValue();
+                const matches = [...content.matchAll(regex)];
+                addNotification(`Found ${matches.length} matches for /${pattern}/`, 'info');
+            } catch (e) {
+                addNotification('Invalid Regex', 'warn');
+            }
+        },
+        colorPicker: () => {
+            addNotification('Color Picker requested. Please use the CSS preview features.', 'info');
+        },
+        insertSnippet: (type: string) => {
+            if (!monacoEditor) return;
+            let snippet = '';
+            switch(type) {
+                case 'for': snippet = 'for (let i = 0; i < array.length; i++) {\n\tconst element = array[i];\n\t\n}'; break;
+                case 'if': snippet = 'if (condition) {\n\t\n} else {\n\t\n}'; break;
+                case 'try': snippet = 'try {\n\t\n} catch (e) {\n\tconsole.error(e);\n}'; break;
+                case 'fetch': snippet = 'const response = await fetch(url);\nconst data = await response.json();\nconsole.log(data);'; break;
+                case 'express': snippet = 'const express = require(\'express\');\nconst app = express();\n\napp.get(\'/\', (req, res) => {\n\tres.send(\'Hello World!\');\n});\n\napp.listen(3000, () => {\n\tconsole.log(\'Server running on port 3000\');\n});'; break;
+            }
+            if (snippet) {
+                const selection = monacoEditor.getSelection();
+                if (selection) {
+                    monacoEditor.executeEdits('Antigravity', [{ range: selection, text: snippet }]);
+                }
+                addNotification(`Inserted ${type} snippet`, 'success');
+            }
+        }
     };
 
     (window as any).AntigravityAPI = AntigravityAPI;
@@ -1494,6 +1591,8 @@ document.addEventListener('DOMContentLoaded', () => {
         'Source Control': 'view-source-control',
         'Run and Debug': 'view-run-debug',
         'Extensions': 'view-extensions',
+        'Dev Tools': 'view-tools',
+        'Database': 'view-database',
         'Account': 'view-account'
     };
 
