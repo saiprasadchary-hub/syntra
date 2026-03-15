@@ -256,6 +256,15 @@ io.on('connection', (socket) => {
         }
     });
 
+    // --- Chat Logic ---
+    socket.on('chat-message', (text) => {
+        console.log('Chat message received:', text);
+        // Simple echo-like response for now to prove connectivity
+        setTimeout(() => {
+            socket.emit('ai-message', `I received your message: "${text}". I am your Antigravity AI assistant, and I'm connected to the backend!`);
+        }, 500);
+    });
+
     // --- Open Folder ---
     socket.on('open-folder', async (folderPath) => {
         const resolved = path.resolve(folderPath);

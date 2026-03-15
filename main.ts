@@ -1394,8 +1394,26 @@ document.addEventListener('DOMContentLoaded', () => {
              msg.className = 'message user';
              msg.textContent = text;
              messageContainer?.appendChild(msg);
+             
+             // Send to backend
+             socket.emit('chat-message', text);
+             
              chatInput.value = '';
+             chatInput.style.height = 'auto';
         }
+    });
+
+    socket.on('ai-message', (text) => {
+        const msg = document.createElement('div');
+        msg.className = 'message assistant';
+        msg.style.background = 'var(--bg-lighter)';
+        msg.style.padding = '10px';
+        msg.style.borderRadius = '8px';
+        msg.style.fontSize = '13px';
+        msg.style.marginTop = '10px';
+        msg.textContent = text;
+        messageContainer?.appendChild(msg);
+        messageContainer?.scrollTo({ top: messageContainer.scrollHeight, behavior: 'smooth' });
     });
 
     // --- Socket Events ---
