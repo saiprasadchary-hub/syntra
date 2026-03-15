@@ -7,14 +7,25 @@ import fs from 'fs-extra';
 import path from 'path';
 import chokidar from 'chokidar';
 import { fileURLToPath } from 'url';
+import cors from 'cors';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// Global CORS for Express
+app.use(cors({
+    origin: "*",
+    methods: ["GET", "POST", "OPTIONS"],
+    credentials: true
+}));
+
 // Health check route
-app.get('/health', (req, res) => res.status(200).send('OK'));
+app.get('/health', (req, res) => {
+    console.log('Health check requested');
+    res.status(200).json({ status: 'ok', uptime: process.uptime() });
+});
 
 app.use(express.static(path.join(__dirname, 'dist')));
 app.use('/preview', (req, res, next) => {
@@ -277,7 +288,13 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 10000; // Render expects 10000 by default if not specified, 
+                                     // but we use PORT env var if available.
 httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`Antigravity Server running on port ${PORT}`);
+    console.log('--- ANTIGRAVITY SERVER STARTUP ---');
+    console.log(`Timestamp: ${new Date().toISOString()}`);
+    console.log(`Port: ${PORT}`);
+    console.log(`Mode: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Workspace: ${workspaceRoot}`);
+    console.log('--- READY FOR CONNECTIONS ---');
 });

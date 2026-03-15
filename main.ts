@@ -207,7 +207,15 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error('Socket connection error:', err);
         // Only notify if it's the first time and not on localhost
         if (window.location.hostname !== 'localhost') {
-            AntigravityAPI.notify(`Connecting to backend... (${backendUrl})`, 'info');
+            AntigravityAPI.notify(`Connection failed: ${err.message}. Retrying...`, 'error');
+            
+            // diagnostic fetch
+            fetch(`${backendUrl}/health`).then(r => {
+                console.log('Health check result:', r.status);
+                if (r.status === 404) {
+                    AntigravityAPI.notify('Backend returned 404. Please check the URL in Settings.', 'warning');
+                }
+            }).catch(e => console.log('Health check failed:', e));
         }
     });
 
