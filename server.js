@@ -22,27 +22,21 @@ try {
 
 const app = express();
 
-// Use the standard CORS middleware with origin reflection
-app.use(cors({
-    origin: true, // Echoes the request origin
-    credentials: true,
-    methods: ["GET", "POST", "OPTIONS", "PUT", "DELETE"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"]
-}));
-
-// Logging middleware
-app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url} - Origin: ${req.headers.origin}`);
-    next();
+// 1. ABSOLUTELY TOP LEVEL HEALTH CHECK WITH MANUAL CORS
+app.get('/health', (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.status(200).json({ status: 'ok', msg: 'Antigravity LIVE V4' });
 });
 
-// Explicit health check
-app.get('/health', (req, res) => {
-    res.status(200).json({ 
-        status: 'ok', 
-        message: 'Antigravity Backend is healthy',
-        timestamp: new Date().toISOString()
-    });
+// 2. Logging and standard CORS
+app.use(cors({
+    origin: true,
+    credentials: true
+}));
+
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+    next();
 });
 
 // Explicit Test
