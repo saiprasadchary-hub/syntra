@@ -124,6 +124,13 @@
                         <button class="btn-secondary" onclick="AntigravityAPI.testRegex()">Regex Tester</button>
                         <button class="btn-secondary" onclick="AntigravityAPI.colorPicker()">Color Picker</button>
                     </div>
+                    <div class="sidebar-header" style="border-top: 1px solid var(--border); margin-top: 10px;">Utilities</div>
+                    <div id="utilities-container" style="padding: 10px; display: flex; flex-direction: column; gap: 5px;">
+                        <button class="btn-secondary" onclick="AntigravityAPI.textAction('trim')">Trim Whitespace</button>
+                        <button class="btn-secondary" onclick="AntigravityAPI.textAction('reverse')">Reverse Lines</button>
+                        <button class="btn-secondary" onclick="AntigravityAPI.textAction('stats')">Word/Char Count</button>
+                        <button class="btn-secondary" onclick="AntigravityAPI.textAction('lorem')">Insert Lorem Ipsum</button>
+                    </div>
                     <div class="sidebar-header" style="border-top: 1px solid var(--border); margin-top: 10px;">Snippet Library</div>
                     <div id="snippets-container" style="padding: 10px; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; flex: 1;">
                         <div class="snippet-item" onclick="AntigravityAPI.insertSnippet('for')" style="padding: 6px 10px; background: var(--bg-lighter); border-radius: 4px; cursor: pointer; font-size: 11px;">For Loop</div>
@@ -292,6 +299,9 @@
                 <div class="status-item" onclick="AntigravityAPI.changeEncoding()" style="cursor: pointer;">UTF-8</div>
                 <div class="status-item" onclick="AntigravityAPI.changeLineEndings()" style="cursor: pointer;">LF</div>
                 <div class="status-item" id="go-live" style="background: var(--accent); color: white; padding: 0 10px; border-radius: 2px; height: 20px; line-height: 20px; font-weight: 600; cursor: pointer;">Go Live</div>
+                <div class="status-item" onclick="AntigravityAPI.toggleZenMode()" title="Toggle Zen Mode" style="cursor: pointer; opacity: 0.8;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                </div>
                 <div class="status-item" id="status-clock">00:00</div>
                 <div class="status-item" title="Notifications">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>

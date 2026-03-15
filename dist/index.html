@@ -6,8 +6,8 @@
     <title>Antigravity IDE | Professional Cloud Development</title>
     <meta name="description" content="A powerful web-based IDE powered by Monaco Editor.">
     <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/microsoft/vscode-icons/master/icons/dark/vscode.svg">
-  <script type="module" crossorigin src="/assets/index-Ck92AA_9.js"></script>
-  <link rel="stylesheet" crossorigin href="/assets/index-C9hSXlPm.css">
+  <script type="module" crossorigin src="/assets/index-B1Y_z4gS.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CGODWC8c.css">
 </head>
 <body data-theme="dark">
     <div class="app-container">
@@ -61,6 +61,12 @@
                 <div class="activity-icon" title="Extensions">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
                 </div>
+                <div class="activity-icon" title="Dev Tools" id="btn-tools-nav">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                </div>
+                <div class="activity-icon" title="Database" id="btn-db-nav">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/><path d="M3 12c0 1.66 4 3 9 3s9-1.34 9-3"/></svg>
+                </div>
                 <div class="activity-icon" title="Account" style="margin-top: auto;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 </div>
@@ -109,6 +115,37 @@
                     </div>
                 </div>
                 <div id="view-extensions" class="sidebar-view">
+                </div>
+                <div id="view-tools" class="sidebar-view">
+                    <div class="sidebar-header">Developer Tools</div>
+                    <div style="padding: 10px; display: flex; flex-direction: column; gap: 8px;">
+                        <button class="btn-secondary" onclick="AntigravityAPI.formatJSON()">JSON Formatter</button>
+                        <button class="btn-secondary" onclick="AntigravityAPI.toggleBase64()">Base64 Converter</button>
+                        <button class="btn-secondary" onclick="AntigravityAPI.generateUUID()">UUID Generator</button>
+                        <button class="btn-secondary" onclick="AntigravityAPI.testRegex()">Regex Tester</button>
+                        <button class="btn-secondary" onclick="AntigravityAPI.colorPicker()">Color Picker</button>
+                    </div>
+                    <div class="sidebar-header" style="border-top: 1px solid var(--border); margin-top: 10px;">Utilities</div>
+                    <div id="utilities-container" style="padding: 10px; display: flex; flex-direction: column; gap: 5px;">
+                        <button class="btn-secondary" onclick="AntigravityAPI.textAction('trim')">Trim Whitespace</button>
+                        <button class="btn-secondary" onclick="AntigravityAPI.textAction('reverse')">Reverse Lines</button>
+                        <button class="btn-secondary" onclick="AntigravityAPI.textAction('stats')">Word/Char Count</button>
+                        <button class="btn-secondary" onclick="AntigravityAPI.textAction('lorem')">Insert Lorem Ipsum</button>
+                    </div>
+                    <div class="sidebar-header" style="border-top: 1px solid var(--border); margin-top: 10px;">Snippet Library</div>
+                    <div id="snippets-container" style="padding: 10px; display: flex; flex-direction: column; gap: 5px; overflow-y: auto; flex: 1;">
+                        <div class="snippet-item" onclick="AntigravityAPI.insertSnippet('for')" style="padding: 6px 10px; background: var(--bg-lighter); border-radius: 4px; cursor: pointer; font-size: 11px;">For Loop</div>
+                        <div class="snippet-item" onclick="AntigravityAPI.insertSnippet('if')" style="padding: 6px 10px; background: var(--bg-lighter); border-radius: 4px; cursor: pointer; font-size: 11px;">If Statement</div>
+                        <div class="snippet-item" onclick="AntigravityAPI.insertSnippet('try')" style="padding: 6px 10px; background: var(--bg-lighter); border-radius: 4px; cursor: pointer; font-size: 11px;">Try/Catch Block</div>
+                        <div class="snippet-item" onclick="AntigravityAPI.insertSnippet('fetch')" style="padding: 6px 10px; background: var(--bg-lighter); border-radius: 4px; cursor: pointer; font-size: 11px;">Async Fetch</div>
+                        <div class="snippet-item" onclick="AntigravityAPI.insertSnippet('express')" style="padding: 6px 10px; background: var(--bg-lighter); border-radius: 4px; cursor: pointer; font-size: 11px;">Express Server</div>
+                    </div>
+                </div>
+                <div id="view-database" class="sidebar-view">
+                    <div class="sidebar-header">Database</div>
+                    <div style="padding: 20px; text-align: center; color: var(--text-muted);">
+                        Connect to a database to explore tables and queries.
+                    </div>
                 </div>
                 <div id="view-run-debug" class="sidebar-view">
                     <div class="sidebar-header">Run and Debug</div>
@@ -167,13 +204,16 @@
                 <div id="editor" class="dashboard hidden" style="display: flex; flex-direction: column; align-items: stretch; justify-content: flex-start; text-align: left;">
                     <div id="editor-tabs" class="tabs-container"></div>
                     <div id="editor-breadcrumbs" class="breadcrumbs"></div>
-                    <div class="editor-main" style="position: relative; flex: 1;">
+                    <div class="editor-main" style="position: relative; flex: 1; display: flex;">
                         <div id="monaco-editor-container" style="flex: 1; height: 100%;"></div>
-                        <div id="extension-detail-container" style="flex: 1; height: 100%; display: none; overflow-y: auto; background: var(--bg-dark);"></div>
-                        <div id="markdown-preview">
-                            <div style="border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 20px; font-weight: 600;">Preview</div>
-                            <div id="preview-body"></div>
+                        <div id="markdown-preview" style="flex: 1; display: none; background: var(--bg-dark); border-left: 1px solid var(--border); overflow-y: auto; padding: 20px;">
+                            <div style="border-bottom: 1px solid var(--border); padding-bottom: 10px; margin-bottom: 20px; font-weight: 600; display: flex; justify-content: space-between;">
+                                <span>Preview</span>
+                                <button onclick="AntigravityAPI.toggleMarkdownPreview()" style="background: transparent; border: none; color: var(--text-muted); cursor: pointer;">✕</button>
+                            </div>
+                            <div id="preview-body" class="markdown-content"></div>
                         </div>
+                        <div id="extension-detail-container" style="flex: 1; height: 100%; display: none; overflow-y: auto; background: var(--bg-dark);"></div>
                     </div>
                 </div>
             </section>
@@ -260,6 +300,9 @@
                 <div class="status-item" onclick="AntigravityAPI.changeEncoding()" style="cursor: pointer;">UTF-8</div>
                 <div class="status-item" onclick="AntigravityAPI.changeLineEndings()" style="cursor: pointer;">LF</div>
                 <div class="status-item" id="go-live" style="background: var(--accent); color: white; padding: 0 10px; border-radius: 2px; height: 20px; line-height: 20px; font-weight: 600; cursor: pointer;">Go Live</div>
+                <div class="status-item" onclick="AntigravityAPI.toggleZenMode()" title="Toggle Zen Mode" style="cursor: pointer; opacity: 0.8;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+                </div>
                 <div class="status-item" id="status-clock">00:00</div>
                 <div class="status-item" title="Notifications">
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -282,6 +325,8 @@
                         <option value="light">Light</option>
                         <option value="midnight">Midnight</option>
                         <option value="monokai">Monokai</option>
+                        <option value="dracula">Dracula</option>
+                        <option value="onedark">One Dark</option>
                     </select>
                 </div>
                 <div style="display: flex; justify-content: space-between; align-items: center;">

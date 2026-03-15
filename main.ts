@@ -228,6 +228,10 @@ document.addEventListener('DOMContentLoaded', () => {
             connStatus.style.color = 'var(--success)';
             connStatus.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"/></svg> Cloud Connected';
         }
+        // Force explorer refresh on connect
+        if (window.AntigravityExplorer) {
+            window.AntigravityExplorer.refresh('.');
+        }
     });
 
     socket.on('reconnect', (attempt) => {
@@ -1456,6 +1460,36 @@ document.addEventListener('DOMContentLoaded', () => {
                     monacoEditor.executeEdits('Antigravity', [{ range: selection, text: snippet }]);
                 }
                 addNotification(`Inserted ${type} snippet`, 'success');
+            }
+        },
+        textAction: (type: string) => {
+            if (!monacoEditor) return;
+            const model = monacoEditor.getModel();
+            if (!model) return;
+            const content = model.getValue();
+            const selection = monacoEditor.getSelection();
+
+            switch(type) {
+                case 'trim':
+                    model.setValue(content.split('\n').map(l => l.trimEnd()).join('\n'));
+                    addNotification('Trimmed line endings', 'info');
+                    break;
+                case 'reverse':
+                    model.setValue(content.split('\n').reverse().join('\n'));
+                    addNotification('Reversed all lines', 'info');
+                    break;
+                case 'stats':
+                    const words = content.trim().split(/\s+/).length;
+                    const chars = content.length;
+                    addNotification(`Stats: ${words} words, ${chars} chars`, 'success');
+                    break;
+                case 'lorem':
+                    const lorem = 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.';
+                    if (selection) {
+                        monacoEditor.executeEdits('Antigravity', [{ range: selection, text: lorem }]);
+                    }
+                    addNotification('Inserted Lorem Ipsum', 'success');
+                    break;
             }
         }
     };

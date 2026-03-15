@@ -23,26 +23,24 @@ try {
 const app = express();
 
 // 1. ABSOLUTELY TOP LEVEL HEALTH CHECK WITH MANUAL CORS
+app.options('*', cors()); // Enable pre-flight for all routes
 app.get('/health', (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.status(200).json({ status: 'ok', msg: 'Antigravity LIVE V4' });
-});
-
-// 2. Logging and standard CORS
-app.use(cors({
-    origin: true,
-    credentials: true
-}));
-
-app.use((req, res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
-    next();
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.status(200).json({ status: 'ok', msg: 'Antigravity LIVE V5 - CORS FIXED' });
 });
 
 // Explicit Test
 app.get('/cors-test', (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.json({ message: 'CORS is working', origin: req.headers.origin });
 });
+
+// 2. Logging and standard CORS
+app.use(cors({
+    origin: '*', // For debugging, allow everything
+    credentials: true
+}));
 
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
@@ -158,10 +156,15 @@ io.on('connection', (socket) => {
 
     // --- File System Logic ---
     socket.on('get-files', async (dir) => {
-        const targetDir = dir ? path.resolve(dir === '.' ? workspaceRoot : path.join(workspaceRoot, dir)) : workspaceRoot;
-        const files = await getFiles(targetDir);
-        const relativePath = dir || '.';
-        socket.emit('files-list', { path: relativePath, files });
+        try {
+            const targetDir = dir ? path.resolve(dir === '.' ? workspaceRoot : path.join(workspaceRoot, dir)) : workspaceRoot;
+            const files = await getFiles(targetDir);
+            const relativePath = dir || '.';
+            socket.emit('files-list', { path: relativePath, files });
+        } catch (err) {
+            console.error('Error getting files:', err);
+            socket.emit('file-error', `Could not list files: ${err.message}`);
+        }
     });
 
     socket.on('read-file', async (relativePath) => {

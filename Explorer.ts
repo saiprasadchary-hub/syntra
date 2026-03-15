@@ -92,12 +92,12 @@ export class Explorer {
     private renderLevel(path: string, depth: number = 0): string {
         const files = this.fileTree.get(path);
         
-        if (this.isLoading.has(path)) {
-            return `<div style="padding: 4px 15px 4px ${depth * 12 + 25}px; color: var(--text-muted); font-size: 11px;">Loading...</div>`;
+        if (!this.socket.connected) {
+            return `<div style="padding: 4px 15px 4px ${depth * 12 + 25}px; color: var(--error); font-size: 11px;">Disconnected</div>`;
         }
 
-        if (!files) {
-            this.refresh(path);
+        if (this.isLoading.has(path) || !files) {
+            if (!files) this.refresh(path);
             return `<div style="padding: 4px 15px 4px ${depth * 12 + 25}px; color: var(--text-muted); font-size: 11px;">Loading...</div>`;
         }
 
