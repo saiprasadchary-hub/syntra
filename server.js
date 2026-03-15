@@ -16,7 +16,11 @@ const app = express();
 
 // Global CORS for Express
 app.use(cors({
-    origin: "*",
+    origin: (origin, callback) => {
+        // Allow all origins for now to simplify, but handle the credentials requirement
+        // In production, you'd list specific domains.
+        callback(null, true);
+    },
     methods: ["GET", "POST", "OPTIONS"],
     credentials: true
 }));
@@ -35,7 +39,10 @@ app.use('/preview', (req, res, next) => {
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
     cors: {
-        origin: "*",
+        origin: (origin, callback) => {
+            // Allow all origins but echo them back to support credentials
+            callback(null, true);
+        },
         methods: ["GET", "POST"],
         credentials: true
     },
@@ -288,8 +295,7 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 10000; // Render expects 10000 by default if not specified, 
-                                     // but we use PORT env var if available.
+const PORT = process.env.PORT || 3001; // Render expects 10000 by default but we prefer 3001 for local parity.
 httpServer.listen(PORT, '0.0.0.0', () => {
     console.log('--- ANTIGRAVITY SERVER STARTUP ---');
     console.log(`Timestamp: ${new Date().toISOString()}`);
